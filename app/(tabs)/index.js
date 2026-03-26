@@ -1,15 +1,6 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  Dimensions
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Dimensions, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
@@ -48,7 +39,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <YeepLogo size={24} />
-        
+
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtn}>
             <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
@@ -62,14 +53,14 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color={COLORS.icon} style={styles.searchIcon} />
-          <TextInput 
+          <TextInput
             style={styles.searchInput}
             placeholder="ค้นหาสินค้า..."
             placeholderTextColor={COLORS.textLight}
@@ -99,7 +90,7 @@ export default function HomeScreen() {
             <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.categoryRow}>
           {CATEGORIES.map(item => (
             <View key={item.id} style={styles.categoryItem}>
@@ -125,22 +116,22 @@ export default function HomeScreen() {
               <View style={styles.imageContainer}>
                 <Image source={{ uri: product.image }} style={styles.productImage} />
                 <TouchableOpacity style={styles.likeBtn}>
-                  <Ionicons 
-                    name={product.isLiked ? "heart" : "heart-outline"} 
-                    size={16} 
-                    color={product.isLiked ? COLORS.primary : COLORS.icon} 
+                  <Ionicons
+                    name={product.isLiked ? "heart" : "heart-outline"}
+                    size={16}
+                    color={product.isLiked ? COLORS.primary : COLORS.icon}
                   />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                
+
                 <View style={styles.ratingRow}>
                   <Ionicons name="star" size={12} color="#FFC107" />
                   <Text style={styles.ratingText}>{product.rating}</Text>
                 </View>
-                
+
                 <View style={styles.priceRow}>
                   <Text style={styles.productPrice}>{product.price} บาท</Text>
                   <TouchableOpacity style={styles.addBtn}>
@@ -234,7 +225,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   promoBanner: {
-    backgroundColor: '#D6DEEC', 
+    backgroundColor: '#D6DEEC',
     borderRadius: SIZES.radius,
     padding: 20,
     marginBottom: 24,
