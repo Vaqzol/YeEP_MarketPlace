@@ -2,9 +2,15 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/theme';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  // ใช้ insets.bottom เต็มจำนวนให้กับทั้ง iOS และ Android ถ้าไม่มี (เช่น Android รุ่นเก่า) ให้เว้นขั้นต่ำ 16
+  const bottomPadding = Platform.OS === 'ios' ? insets.bottom : Math.max(insets.bottom, 16);
+  const tabHeight = 60 + bottomPadding;
+
   return (
     <Tabs
       screenOptions={{
@@ -14,13 +20,14 @@ export default function TabLayout() {
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
-          height: 60,
-          paddingBottom: 8,
+          minHeight: tabHeight,
+          paddingBottom: bottomPadding,
           paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           marginTop: 2,
+          marginBottom: Platform.OS === 'android' ? 4 : 0,
         }
       }}
     >
