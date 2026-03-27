@@ -17,10 +17,12 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { auth } from '../../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMSG, setErrorMSG] = useState('');
   
@@ -35,6 +37,9 @@ export default function LoginScreen() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Save rememberMe preference
+      await AsyncStorage.setItem('rememberMe', rememberMe ? 'true' : 'false');
+      
       router.replace('/(tabs)');
     } catch (error) {
       console.error("Login Error:", error);
@@ -91,8 +96,14 @@ export default function LoginScreen() {
               />
               
               <View style={styles.optionsRow}>
-                <TouchableOpacity style={styles.checkboxContainer}>
-                  <View style={styles.checkbox} />
+                <TouchableOpacity 
+                  style={styles.checkboxContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
                   <Text style={styles.checkboxText}>จดจำฉันไว้</Text>
                 </TouchableOpacity>
                 
@@ -213,6 +224,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     marginRight: 8,
     backgroundColor: '#FAFAFA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   checkboxText: {
     fontSize: SIZES.fontSm,

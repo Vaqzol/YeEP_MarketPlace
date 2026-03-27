@@ -15,13 +15,70 @@ import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
 import OTPInput from '../../components/OTPInput';
 import CustomButton from '../../components/CustomButton';
+import { useLocalSearchParams } from 'expo-router';
+import { auth, db } from '../../config/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function OTPVerifyScreen() {
+  const { email } = useLocalSearchParams();
   const [otp, setOtp] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMSG, setErrorMSG] = useState('');
   
-  const handleVerify = () => {
-    // Navigate to success screen
-    router.replace('/(auth)/register-success');
+  const handleVerify = async () => {
+    if (otp.length !== 6) {
+      setErrorMSG('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMSG('');
+
+    try {
+      // 1. Get OTP doc from Firestore
+      const otpDoc = await getDoc(doc(db, "otps", email));
+      
+      if (!otpDoc.exists()) {
+        setErrorMSG('รหัส OTP หมดอายุหรือไม่อยู่ในระบบ กรุณาลองสมัครใหม่อีกครั้ง');
+        setIsLoading(false);
+        return;
+      }
+
+      const data = otpDoc.data();
+
+      // 2. Compare OTP
+      if (data.otp === otp) {
+        // 3. OTP Correct! Create actual user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, data.password);
+        const user = userCredential.user;
+
+        // 4. Save User Profile to Firestore
+        await setDoc(doc(db, "users", user.uid), {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          createdAt: serverTimestamp()
+        });
+
+        // 5. Cleanup OTP temporary data
+        await deleteDoc(doc(db, "otps", email));
+
+        // 6. Navigate to success
+        router.replace('/(auth)/register-success');
+      } else {
+        setErrorMSG('รหัส OTP ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+      }
+    } catch (error) {
+      console.error("Verify Error:", error);
+      if (error.code === 'auth/email-already-in-use') {
+        setErrorMSG('อีเมลนี้ถูกลงทะเบียนไปแล้ว');
+      } else {
+        setErrorMSG('เกิดข้อผิดพลาด: ' + error.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,10 +109,12 @@ export default function OTPVerifyScreen() {
               </View>
               
               <OTPInput 
-                length={5}
+                length={6}
                 value={otp}
                 onChangeText={setOtp}
               />
+              
+              {errorMSG ? <Text style={styles.errorMSG}>{errorMSG}</Text> : null}
               
               <View style={styles.infoRow}>
                 <Text style={styles.infoText}>รหัส </Text>
@@ -68,9 +127,10 @@ export default function OTPVerifyScreen() {
               </TouchableOpacity>
               
               <CustomButton 
-                title="ลงทะเบียน" 
+                title={isLoading ? "กำลังตรวจสอบ..." : "ลงทะเบียน"} 
                 onPress={handleVerify} 
                 style={styles.verifyBtn}
+                disabled={isLoading}
               />
             </View>
             
@@ -133,6 +193,13 @@ const styles = StyleSheet.create({
     color: '#1A2A47',
     marginBottom: 30,
     textAlign: 'center',
+  },
+  errorMSG: {
+    color: COLORS.error,
+    fontSize: SIZES.fontSm,
+    textAlign: 'center',
+    marginBottom: 10,
+    marginTop: -10,
   },
   formContainer: {
     width: '100%',

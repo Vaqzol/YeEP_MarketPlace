@@ -17,7 +17,7 @@ import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
 import { auth, db } from '../../config/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState('');
@@ -42,28 +42,43 @@ export default function RegisterScreen() {
     setErrorMSG('');
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Save extra user data to Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Save OTP and user data temporarily to Firestore
+      await setDoc(doc(db, "otps", email), {
         firstName,
         lastName,
         email,
-        createdAt: new Date().toISOString()
+        password,
+        otp,
+        createdAt: serverTimestamp()
       });
 
-      // Navigate to OTP verification (or direct success)
-      router.push('/(auth)/otp-verify');
+      // Send OTP via Google Apps Script
+      const gasUrl = 'https://script.google.com/macros/s/AKfycbwyUrvcgGSlGHXABITi1H0ODdbl2r8qjCygKs1MSaKP9HlBs1eJydO6LELRxKzBjD51/exec';
+      
+      try {
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors', // GAS web app requires no-cors for simple fetch if not handling OPTIONS
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, otp })
+        });
+      } catch (e) {
+        console.log("GAS fetch error (often ignorable with no-cors):", e);
+      }
+
+      // Navigate to OTP verification
+      router.push({
+        pathname: '/(auth)/otp-verify',
+        params: { email }
+      });
     } catch (error) {
       console.error("Register Error:", error);
-      if (error.code === 'auth/email-already-in-use') {
-        setErrorMSG('อีเมลนี้มีผู้ใช้งานแล้ว');
-      } else if (error.code === 'auth/invalid-email') {
-        setErrorMSG('รูปแบบอีเมลไม่ถูกต้อง');
-      } else {
-        setErrorMSG('เกิดข้อผิดพลาดในการสมัครสมาชิก: ' + error.message);
-      }
+      setErrorMSG('เกิดข้อผิดพลาด: ' + error.message);
     } finally {
       setIsLoading(false);
     }

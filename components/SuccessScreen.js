@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../constants/theme';
 import YeepLogo from './YeepLogo';
 
-const SuccessScreen = ({ title }) => {
+const SuccessScreen = ({ title, subtitle }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -19,6 +19,7 @@ const SuccessScreen = ({ title }) => {
         </View>
         
         <Text style={styles.title}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
     </View>
   );
@@ -62,6 +63,14 @@ const styles = StyleSheet.create({
     fontWeight: FONTS.bold,
     color: '#1A2A47',
     textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: SIZES.fontSm,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 20,
+    lineHeight: 20,
   }
 });
 

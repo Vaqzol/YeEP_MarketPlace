@@ -16,7 +16,10 @@ export default function ResetSuccessScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.cardContainer}>
-          <SuccessScreen title="เปลี่ยนรหัสผ่านสำเร็จ" />
+          <SuccessScreen 
+            title="ส่งลิงก์สำเร็จ" 
+            subtitle="กรุณาตรวจสอบอีเมลของคุณเพื่อตั้งรหัสผ่านใหม่" 
+          />
           
           <View style={styles.buttonContainer}>
             <CustomButton 
