@@ -2,6 +2,7 @@
   "expo": {
     "name": "YeEP_MarketPlace",
     "slug": "YeEP_MarketPlace",
+    "scheme": "yeep",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "แอปต้องการเข้าถึงตำแหน่งที่ตั้งของคุณเพื่อปักหมุดจุดนัดรับสินค้า"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,14 +24,19 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-asset"
+      "expo-asset",
+      "expo-location"
     ]
   }
 }

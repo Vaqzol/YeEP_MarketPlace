@@ -152,7 +152,7 @@ export default function HomeScreen() {
               <Text style={styles.exploreBtnText}>สำรวจ</Text>
             </TouchableOpacity>
           </View>
-          <Ionicons name="checkmark-decagram" size={80} color="#1C2E4A" style={styles.bannerIcon} />
+          <Ionicons name="shield-checkmark" size={80} color="#1C2E4A" style={styles.bannerIcon} />
         </View>
         <View style={{ height: 20 }} />
 

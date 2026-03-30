@@ -18,8 +18,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.icon,
         tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: COLORS.border,
+          borderTopWidth: 0,           // <--- แก้จาก 1 เป็น 0
+          elevation: 0,                // <--- เพิ่มบรรทัดนี้สำหรับ Android เพื่อเอาเงาออก (ถ้ามี)
+          shadowOpacity: 0,
           minHeight: tabHeight,
           paddingBottom: bottomPadding,
           paddingTop: 8,
