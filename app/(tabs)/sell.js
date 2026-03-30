@@ -168,10 +168,16 @@ export default function SellScreen() {
               <Text style={[styles.statusText, { color: item.textColor }]}>{item.status}</Text>
             </View>
             <View style={styles.productActions}>
-              <TouchableOpacity style={styles.actionIcon}>
+              <TouchableOpacity 
+                style={styles.actionIcon}
+                onPress={() => router.push(`/seller/edit-product?id=${item.id}`)}
+              >
                 <Ionicons name="pencil-outline" size={18} color={COLORS.textLight} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionIcon}>
+              <TouchableOpacity 
+                style={styles.actionIcon}
+                onPress={() => router.push(`/seller/edit-product?id=${item.id}`)}
+              >
                 <Ionicons name="trash-outline" size={18} color={COLORS.textLight} />
               </TouchableOpacity>
             </View>
