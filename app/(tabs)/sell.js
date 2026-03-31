@@ -278,7 +278,10 @@ export default function SellScreen() {
           <Text style={styles.headerTitle}>YeEP Seller</Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => router.push('/chat')}
+          >
             <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Image source={{ uri: 'https://via.placeholder.com/40' }} style={styles.avatar} />

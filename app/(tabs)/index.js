@@ -1,9 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Dimensions, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
+import { auth, db } from '../../config/firebase';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
+
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -15,26 +19,52 @@ const CATEGORIES = [
   { id: 4, name: 'อาหาร', icon: 'restaurant-outline', color: '#DEE4EE' },
 ];
 
-const PRODUCTS = [
-  {
-    id: 1,
-    name: 'กระเป๋ามือสอง',
-    price: '199',
-    rating: '4.8 (1)',
-    image: 'https://images.unsplash.com/photo-1584916201218-f4242ceb4809?w=400',
-    isLiked: true,
-  },
-  {
-    id: 2,
-    name: 'เดรสมือสองสภาพดี',
-    price: '85',
-    rating: '4.5 (1)',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400',
-    isLiked: false,
-  }
-];
-
 export default function HomeScreen() {
+  const router = useRouter();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+
+  useEffect(() => {
+    // 1. ดึงรายการผลิตภัณฑ์แบบ Real-time
+    const q = query(
+      collection(db, 'products'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const prods = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setProducts(prods);
+      setLoading(false);
+    });
+
+    // 2. ตรวจสอบแจ้งเตือนแชทใหม่
+    let chatUnsubscribe = () => {};
+    if (auth.currentUser) {
+      const chatQuery = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', auth.currentUser.uid)
+      );
+
+      chatUnsubscribe = onSnapshot(chatQuery, (snapshot) => {
+        // ตรวจสอบว่ามีแชทไหนที่ผู้ส่งล่าสุดไม่ใช่เรา (เป็นคนอื่นทักมา)
+        const hasNew = snapshot.docs.some(doc => {
+          const data = doc.data();
+          return data.lastSenderId !== auth.currentUser.uid;
+        });
+        setHasNewMessage(hasNew);
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      chatUnsubscribe();
+    };
+  }, [auth.currentUser?.uid]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -42,13 +72,21 @@ export default function HomeScreen() {
 
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
+            <Ionicons name="heart-outline" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.iconBtn}
+            onPress={() => router.push('/chat')}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={24} color={COLORS.text} />
+            {hasNewMessage && (
+              <View style={[styles.badge, { backgroundColor: '#FF4D4F', width: 12, height: 12, borderRadius: 6, top: -2, right: -2 }]}>
+                <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'white' }} />
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn}>
             <Ionicons name="cart-outline" size={24} color={COLORS.text} />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -110,38 +148,81 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.productRow}>
-          {PRODUCTS.map(product => (
-            <View key={product.id} style={styles.productCard}>
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: product.image }} style={styles.productImage} />
-                <TouchableOpacity style={styles.likeBtn}>
-                  <Ionicons
-                    name={product.isLiked ? "heart" : "heart-outline"}
-                    size={16}
-                    color={product.isLiked ? COLORS.primary : COLORS.icon}
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginVertical: 20 }} />
+        ) : products.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>ยังไม่มีสินค้าในขณะนี้</Text>
+          </View>
+        ) : (
+          <View style={styles.productRow}>
+            {products.slice(0, 4).map(product => (
+              <TouchableOpacity 
+                key={product.id} 
+                style={styles.productCard}
+                onPress={() => router.push(`/product/${product.id}`)}
+              >
+                <View style={styles.imageContainer}>
+                  <Image 
+                    source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }} 
+                    style={styles.productImage} 
                   />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={12} color="#FFC107" />
-                  <Text style={styles.ratingText}>{product.rating}</Text>
-                </View>
-
-                <View style={styles.priceRow}>
-                  <Text style={styles.productPrice}>{product.price} บาท</Text>
-                  <TouchableOpacity style={styles.addBtn}>
-                    <Ionicons name="add" size={16} color={COLORS.primary} />
+                  <TouchableOpacity style={styles.likeBtn}>
+                    <Ionicons
+                      name="heart-outline"
+                      size={16}
+                      color={COLORS.icon}
+                    />
                   </TouchableOpacity>
                 </View>
-              </View>
-            </View>
-          ))}
+
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={12} color="#FFC107" />
+                    <Text style={styles.ratingText}>4.5 (0)</Text>
+                  </View>
+
+                  <View style={styles.priceRow}>
+                    <Text style={styles.productPrice}>{product.price} บาท</Text>
+                    <TouchableOpacity style={styles.addBtn}>
+                      <Ionicons name="add" size={16} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Latest Items Section */}
+        <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+          <Text style={styles.sectionTitle}>รายการล่าสุด</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
+          </TouchableOpacity>
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.latestScroll}>
+          {products.slice(0, 10).map(product => (
+            <TouchableOpacity 
+              key={product.id} 
+              style={styles.latestCard}
+              onPress={() => router.push(`/product/${product.id}`)}
+            >
+              <Image 
+                source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }} 
+                style={styles.latestCardImg} 
+              />
+              <View style={styles.latestCardInfo}>
+                <Text style={styles.latestCardName} numberOfLines={1}>{product.name}</Text>
+                <Text style={styles.latestCardPrice}>{product.price} บาท</Text>
+                <Text style={styles.latestCardTag}>เปิดตัวใหม่</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {/* New Arrival Banner */}
         <View style={styles.newArrivalBanner}>
@@ -154,8 +235,6 @@ export default function HomeScreen() {
           </View>
           <Ionicons name="shield-checkmark" size={80} color="#1C2E4A" style={styles.bannerIcon} />
         </View>
-        <View style={{ height: 20 }} />
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -298,8 +377,10 @@ const styles = StyleSheet.create({
   },
   productRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 30,
+    rowGap: 15,
   },
   productCard: {
     width: (width - SIZES.padding * 2 - 15) / 2, // 2 columns
@@ -308,6 +389,55 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textLight,
+  },
+  latestScroll: {
+    paddingBottom: 20,
+  },
+  latestCard: {
+    width: 260,
+    height: 100,
+    backgroundColor: 'white',
+    borderRadius: SIZES.radius,
+    marginRight: 15,
+    flexDirection: 'row',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  latestCardImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: '#F0F0F0',
+  },
+  latestCardInfo: {
+    flex: 1,
+    paddingLeft: 12,
+    justifyContent: 'center',
+  },
+  latestCardName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  latestCardPrice: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginVertical: 4,
+  },
+  latestCardTag: {
+    fontSize: 10,
+    color: COLORS.textLight,
   },
   imageContainer: {
     width: '100%',
