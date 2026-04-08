@@ -184,7 +184,7 @@ export default function ProfileScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.blueBtn} onPress={() => Alert.alert('ประวัติการสั่งซื้อ', 'ฟีเจอร์นี้กำลังพัฒนาครับ')}>
+          <TouchableOpacity style={styles.blueBtn} onPress={() => router.push('/(tabs)/orders')}>
             <Text style={styles.blueBtnText}>ประวัติการสั่งซื้อ</Text>
           </TouchableOpacity>
 

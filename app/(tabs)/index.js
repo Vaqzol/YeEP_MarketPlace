@@ -85,7 +85,10 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity 
+            style={styles.iconBtn}
+            onPress={() => router.push('/cart')}
+          >
             <Ionicons name="cart-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>

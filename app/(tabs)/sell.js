@@ -12,39 +12,7 @@ import {
   collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp
 } from 'firebase/firestore';
 
-// ===== ORDER MOCK DATA =====
-const MOCK_ORDERS = [
-  {
-    id: 'YE-8821',
-    productName: 'Classic White Watch',
-    productImage: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200',
-    price: 1250,
-    buyerName: 'คุณสมชาย',
-    buyerPhone: '081-234-56XX',
-    location: 'หน้าหอพักสุรนิเวศ 1 (ประตูทางเข้าหลัก)',
-    status: 'รอดำเนินการ',
-  },
-  {
-    id: 'YE-8819',
-    productName: 'Bluetooth Headphones Gen 2',
-    productImage: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200',
-    price: 890,
-    buyerName: 'คุณวิภาดา',
-    buyerPhone: '089-765-43XX',
-    location: 'โรงอาหารกลาง 1 (โต๊ะยาวด้านหน้า)',
-    status: 'กำลังเตรียมสินค้า',
-  },
-  {
-    id: 'YE-8790',
-    productName: 'Sport Runner X1',
-    productImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200',
-    price: 2450,
-    buyerName: 'คุณธนนากรณ์',
-    buyerPhone: '062-111-22XX',
-    location: 'ลานจอดรถกลิติ C ชั้น 1',
-    status: 'เสร็จสิ้น',
-  },
-];
+// ===== ORDER MOCK DATA REMOVED (NOW USING REAL DATA) =====
 
 const STATUS_OPTIONS = [
   { key: 'รอดำเนินการ',      icon: 'clipboard-outline',     color: '#FA8C16' },
@@ -70,16 +38,21 @@ export default function SellScreen() {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   // --- Orders state ---
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Stats (mock)
+  // --- Real Stats Calculation ---
+  const completedOrders = orders.filter(o => o.status === 'เสร็จสิ้น' || o.status === 'จัดส่งแล้ว');
+  const monthlyRevenue = completedOrders.reduce((sum, o) => sum + (o.totalAmount || o.price || 0), 0);
+  const pendingCount = orders.filter(o => o.status !== 'เสร็จสิ้น' && o.status !== 'จัดส่งแล้ว').length;
+  const totalViews = products.reduce((sum, p) => sum + (p.views || 0), 0);
+
   const stats = [
-    { label: 'รายได้ต่อเดือน',    value: '฿12,450', icon: 'wallet-outline', trend: '+14.2%' },
-    { label: 'สินค้าที่ต้องจัดส่ง', value: orders.filter(o => o.status !== 'เสร็จสิ้น').length.toString(), icon: 'basket-outline', subtext: '! ต้องดำเนินการ' },
-    { label: 'จำนวนเข้าชม',      value: '4.2k',   icon: 'eye-outline',    trend: '+5.1%' },
+    { label: 'รายได้รวม',    value: `฿${monthlyRevenue.toLocaleString()}`, icon: 'wallet-outline', trend: 'ยอดขายจริง' },
+    { label: 'สิ่งต้องจัดส่ง', value: pendingCount.toString(), icon: 'basket-outline', subtext: pendingCount > 0 ? '! ต้องดำเนินการ' : 'ไม่มีงานค้าง' },
+    { label: 'ยอดเข้าชมรวม',      value: totalViews >= 1000 ? `${(totalViews/1000).toFixed(1)}k` : totalViews.toString(),   icon: 'eye-outline',    trend: 'จากสินค้าคุณ' },
   ];
 
   // Fetch products from Firestore
@@ -93,7 +66,7 @@ export default function SellScreen() {
         if (data.stock === 0)     { status = 'หมด';       sColor = '#F0F2F5'; tColor = '#8A97A8'; }
         else if (data.stock < 5) { status = 'สต็อกต่ำ'; sColor = '#FFF7E6'; tColor = '#FAAD14'; }
         return {
-          id: d.id, name: data.name, stock: data.stock,
+          id: d.id, name: data.name, stock: data.stock, views: data.views || 0,
           status, statusColor: sColor, textColor: tColor,
           image: data.images?.length ? data.images[0] : 'https://via.placeholder.com/50'
         };
@@ -104,15 +77,29 @@ export default function SellScreen() {
     return () => unsub();
   }, []);
 
-  // Fetch real orders (ถ้ามี)
+  // Fetch real orders
   useEffect(() => {
     if (!auth.currentUser) return;
-    const q = query(collection(db, 'orders'), where('sellerId', '==', auth.currentUser.uid));
+    const q = query(collection(db, 'orders'), where('sellerIds', 'array-contains', auth.currentUser.uid));
     const unsub = onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        const real = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setOrders([...real, ...MOCK_ORDERS]);
-      }
+      const realOrders = snap.docs.map(d => {
+        const data = d.data();
+        const firstItem = data.items?.[0] || {};
+        const otherCount = data.items?.length > 1 ? ` (+${data.items.length - 1} ชิ้น)` : '';
+        return {
+          id: d.id,
+          productName: firstItem.name ? `${firstItem.name}${otherCount}` : 'คำสั่งซื้อ',
+          productImage: firstItem.image || 'https://via.placeholder.com/200',
+          price: data.totalAmount,
+          buyerName: data.buyerName || 'ลูกค้า',
+          location: 'จัดส่งตามที่อยู่',
+          status: data.status,
+          slipImage: data.paymentSlip,
+          ...data
+        };
+      });
+      // Sort oldest to newest usually for queue, but let's do newest first for dashboard
+      setOrders(realOrders.sort((a,b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
     });
     return () => unsub();
   }, []);
@@ -124,11 +111,6 @@ export default function SellScreen() {
 
   const confirmUpdate = async () => {
     if (!selectedOrder) return;
-    if (selectedOrder.isMock || !selectedOrder.docId) {
-      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: newStatus } : o));
-      setSelectedOrder(null);
-      return;
-    }
     setUpdatingStatus(true);
     try {
       await updateDoc(doc(db, 'orders', selectedOrder.id), {
@@ -290,14 +272,7 @@ export default function SellScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-        {/* Register Shop Banner */}
-        <TouchableOpacity
-          style={styles.bannerContainer}
-          onPress={() => router.push('/seller/register-shop')}
-        >
-          <Text style={styles.bannerTitle}>🏪 สมัครร้านค้าประจำ</Text>
-          <Ionicons name="chevron-forward" size={18} color="#D48806" />
-        </TouchableOpacity>
+
 
         {/* Stats */}
         {stats.map((stat, i) => (

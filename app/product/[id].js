@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import { db, auth } from '../../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
@@ -33,6 +33,13 @@ export default function ProductDetailScreen() {
         if (docSnap.exists()) {
           const productData = { id: docSnap.id, ...docSnap.data() };
           setProduct(productData);
+
+          // อัปเดตยอดเข้าชม (Views)
+          try {
+            await updateDoc(docRef, { views: increment(1) });
+          } catch (err) {
+            console.log('Error updating views', err);
+          }
 
           // 2. Fetch Seller Info if sellerId exists
           if (productData.sellerId) {
@@ -203,7 +210,44 @@ export default function ProductDetailScreen() {
           <Text style={styles.contactBtnText}>ติดต่อ</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.addToCartBtn}>
+        <TouchableOpacity 
+          style={styles.addToCartBtn}
+          onPress={async () => {
+            if (!auth.currentUser) {
+              Alert.alert('กรุณาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบก่อนครับ');
+              return;
+            }
+            if (auth.currentUser.uid === product.sellerId) {
+              Alert.alert('ขออภัย', 'ไม่สามารถสร้างรายการสั่งซื้อสินค้าของตัวเองได้ครับ');
+              return;
+            }
+            try {
+              const cartRef = doc(db, 'carts', auth.currentUser.uid, 'items', id);
+              const cartSnap = await getDoc(cartRef);
+
+              if (cartSnap.exists()) {
+                await updateDoc(cartRef, {
+                  quantity: cartSnap.data().quantity + 1,
+                  updatedAt: serverTimestamp()
+                });
+              } else {
+                await setDoc(cartRef, {
+                  productId: id,
+                  name: product.name,
+                  price: product.price,
+                  image: product.images?.[0] || null,
+                  sellerId: product.sellerId,
+                  quantity: 1,
+                  addedAt: serverTimestamp()
+                });
+              }
+              Alert.alert('สำเร็จ', 'เพิ่มสินค้าลงตะกร้าเรียบร้อยแล้ว!');
+            } catch (error) {
+              console.error(error);
+              Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถเพิ่มลงตะกร้าได้ครับ');
+            }
+          }}
+        >
           <Ionicons name="cart-outline" size={20} color="white" />
           <Text style={styles.addToCartText}>เพิ่มลงตะกร้า</Text>
         </TouchableOpacity>
