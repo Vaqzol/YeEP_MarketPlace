@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import { useRouter } from 'expo-router';
-import { db } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db, auth } from '../../config/firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +25,19 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+
+  const toggleLike = async (product) => {
+    if (!auth.currentUser) return;
+    const isLiked = product.likes && product.likes.includes(auth.currentUser.uid);
+    try {
+      const prodRef = doc(db, 'products', product.id);
+      await updateDoc(prodRef, {
+        likes: isLiked ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid)
+      });
+    } catch (err) {
+      console.log('Toggle like error', err);
+    }
+  };
 
   useEffect(() => {
     const q = query(
@@ -61,8 +74,15 @@ export default function ExploreScreen() {
           source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/150' }} 
           style={styles.productImage} 
         />
-        <TouchableOpacity style={styles.likeBtn}>
-          <Ionicons name="heart-outline" size={16} color={COLORS.icon} />
+        <TouchableOpacity 
+          style={styles.likeBtn}
+          onPress={() => toggleLike(item)}
+        >
+          <Ionicons 
+            name={item.likes?.includes(auth.currentUser?.uid) ? "heart" : "heart-outline"} 
+            size={16} 
+            color={item.likes?.includes(auth.currentUser?.uid) ? "#FF4D4F" : COLORS.icon} 
+          />
         </TouchableOpacity>
       </View>
 
@@ -71,7 +91,11 @@ export default function ExploreScreen() {
         
         <View style={styles.ratingRow}>
           <Ionicons name="star" size={12} color="#FFC107" />
-          <Text style={styles.ratingText}>4.5 (0)</Text>
+          <Text style={styles.ratingText}>
+            {item.reviewCount > 0 
+              ? (item.totalRating / item.reviewCount).toFixed(1) 
+              : '0'} ({item.reviewCount || 0})
+          </Text>
         </View>
 
         <Text style={styles.productPrice}>{item.price} บาท</Text>

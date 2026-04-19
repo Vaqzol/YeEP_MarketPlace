@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
 import { auth, db } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 import { useRouter } from 'expo-router';
 
@@ -24,6 +24,19 @@ export default function HomeScreen() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+
+  const toggleLike = async (product) => {
+    if (!auth.currentUser) return;
+    const isLiked = product.likes && product.likes.includes(auth.currentUser.uid);
+    try {
+      const prodRef = doc(db, 'products', product.id);
+      await updateDoc(prodRef, {
+        likes: isLiked ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid)
+      });
+    } catch (err) {
+      console.log('Toggle like error', err);
+    }
+  };
 
   useEffect(() => {
     // 1. ดึงรายการผลิตภัณฑ์แบบ Real-time
@@ -170,11 +183,14 @@ export default function HomeScreen() {
                     source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }} 
                     style={styles.productImage} 
                   />
-                  <TouchableOpacity style={styles.likeBtn}>
+                  <TouchableOpacity 
+                    style={styles.likeBtn}
+                    onPress={() => toggleLike(product)}
+                  >
                     <Ionicons
-                      name="heart-outline"
+                      name={product.likes?.includes(auth.currentUser?.uid) ? "heart" : "heart-outline"}
                       size={16}
-                      color={COLORS.icon}
+                      color={product.likes?.includes(auth.currentUser?.uid) ? "#FF4D4F" : COLORS.icon}
                     />
                   </TouchableOpacity>
                 </View>
@@ -184,7 +200,11 @@ export default function HomeScreen() {
 
                   <View style={styles.ratingRow}>
                     <Ionicons name="star" size={12} color="#FFC107" />
-                    <Text style={styles.ratingText}>4.5 (0)</Text>
+                    <Text style={styles.ratingText}>
+                      {product.reviewCount > 0 
+                        ? (product.totalRating / product.reviewCount).toFixed(1) 
+                        : '0'} ({product.reviewCount || 0})
+                    </Text>
                   </View>
 
                   <View style={styles.priceRow}>

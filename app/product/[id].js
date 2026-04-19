@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import { db, auth } from '../../config/firebase';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
@@ -33,6 +33,9 @@ export default function ProductDetailScreen() {
         if (docSnap.exists()) {
           const productData = { id: docSnap.id, ...docSnap.data() };
           setProduct(productData);
+          if (productData.likes?.includes(auth.currentUser?.uid)) {
+            setIsLiked(true);
+          }
 
           // อัปเดตยอดเข้าชม (Views)
           try {
@@ -74,6 +77,21 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const handleToggleLike = async () => {
+    if (!auth.currentUser) return;
+    const previousLikeStatus = isLiked;
+    setIsLiked(!previousLikeStatus); // Optimistic update
+    try {
+      const prodRef = doc(db, 'products', id);
+      await updateDoc(prodRef, {
+        likes: previousLikeStatus ? arrayRemove(auth.currentUser.uid) : arrayUnion(auth.currentUser.uid)
+      });
+    } catch (err) {
+       console.log('Error toggling like', err);
+       setIsLiked(previousLikeStatus); // revert on failure
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -111,11 +129,11 @@ export default function ProductDetailScreen() {
         <View style={styles.infoContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.productName}>{product.name}</Text>
-            <TouchableOpacity onPress={() => setIsLiked(!isLiked)}>
+            <TouchableOpacity onPress={handleToggleLike}>
               <Ionicons 
                 name={isLiked ? "heart" : "heart-outline"} 
                 size={28} 
-                color={isLiked ? COLORS.primary : COLORS.textLight} 
+                color={isLiked ? "#FF4D4F" : COLORS.textLight} 
               />
             </TouchableOpacity>
           </View>
@@ -147,7 +165,11 @@ export default function ProductDetailScreen() {
                 </Text>
                 <View style={styles.sellerRating}>
                   <Ionicons name="star" size={14} color="#FFC107" />
-                  <Text style={styles.ratingText}>4.9 (50 รีวิว)</Text>
+                  <Text style={styles.ratingText}>
+                    {seller && seller.reviewCount > 0 
+                      ? (seller.totalRating / seller.reviewCount).toFixed(1) 
+                      : '0'} ({seller?.reviewCount || 0} รีวิว)
+                  </Text>
                 </View>
               </View>
             </View>

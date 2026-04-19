@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { auth, db } from '../../config/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 
 const TABS = ['ทั้งหมด', 'รอดำเนินการ', 'รอรับสินค้า', 'สำเร็จแล้ว', 'ยกเลิก'];
 
@@ -37,6 +37,7 @@ export default function BuyerOrdersScreen() {
   // Rating Modal States
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [ratingOrderId, setRatingOrderId] = useState(null);
+  const [ratingItem, setRatingItem] = useState(null);
   const [ratingProductId, setRatingProductId] = useState(null);
   const [ratingStars, setRatingStars] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
@@ -77,6 +78,8 @@ export default function BuyerOrdersScreen() {
           statusColor: displayColor,
           isRated: data.isRated || false,
           createdAt: data.createdAt?.toDate() || new Date(),
+          items: data.items || [],
+          sellerId: data.sellerIds?.[0] || null,
         };
       });
 
@@ -128,6 +131,7 @@ export default function BuyerOrdersScreen() {
 
   const openRatingModal = (item) => {
     setRatingOrderId(item.id);
+    setRatingItem(item);
     setRatingStars(5);
     setRatingComment('');
     setRatingModalVisible(true);
@@ -143,8 +147,33 @@ export default function BuyerOrdersScreen() {
         rating: ratingStars,
         comment: ratingComment.trim(),
         createdAt: serverTimestamp(),
+        sellerId: ratingItem?.sellerId || null,
       });
       await updateDoc(doc(db, 'orders', ratingOrderId), { isRated: true });
+      
+      // อัปเดต Rating ให้คนขาย
+      if (ratingItem?.sellerId) {
+        try {
+          await updateDoc(doc(db, 'users', ratingItem.sellerId), {
+            reviewCount: increment(1),
+            totalRating: increment(ratingStars)
+          });
+        } catch(e) {}
+      }
+      
+      // อัปเดต Rating ให้กับตัวสินค้า
+      if (ratingItem?.items && ratingItem.items.length > 0) {
+        await Promise.all(ratingItem.items.map(async (prodItem) => {
+          if (!prodItem.id) return;
+          try {
+            await updateDoc(doc(db, 'products', prodItem.id), {
+              reviewCount: increment(1),
+              totalRating: increment(ratingStars)
+            });
+          } catch(e) {}
+        }));
+      }
+
       setRatingModalVisible(false);
       Alert.alert('ขอบคุณ! 🌟', `คุณให้คะแนน ${ratingStars} ดาวเรียบร้อยแล้วครับ`);
     } catch (err) {
@@ -206,11 +235,11 @@ export default function BuyerOrdersScreen() {
         {/* Action Buttons Row */}
         <View style={styles.actionsContainer}>
           {isCancelled ? (
-            <TouchableOpacity style={styles.secondaryBtn}>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/order/${item.id}`)}>
               <Text style={styles.secondaryBtnText}>ดูรายละเอียด</Text>
             </TouchableOpacity>
           ) : isPending ? (
-            <TouchableOpacity style={styles.secondaryBtn}>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/order/${item.id}`)}>
               <Text style={styles.secondaryBtnText}>ดูรายละเอียด</Text>
             </TouchableOpacity>
           ) : needsReceiveConfirm ? (
@@ -227,12 +256,12 @@ export default function BuyerOrdersScreen() {
                   {item.isRated ? '✓ ให้คะแนนแล้ว' : '⭐ ให้คะแนน'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryBtnFixed}>
+              <TouchableOpacity style={styles.secondaryBtnFixed} onPress={() => router.push(`/order/${item.id}`)}>
                 <Text style={styles.secondaryBtnTextFixed}>ดูรายละเอียด</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={styles.secondaryBtn}>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/order/${item.id}`)}>
               <Text style={styles.secondaryBtnText}>ดูรายละเอียด</Text>
             </TouchableOpacity>
           )}
