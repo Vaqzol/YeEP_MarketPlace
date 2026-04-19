@@ -18,14 +18,15 @@ const STATUS_OPTIONS = [
   { key: 'รอดำเนินการ',      icon: 'clipboard-outline',     color: '#FA8C16' },
   { key: 'กำลังเตรียมสินค้า', icon: 'cube-outline',          color: '#1890FF' },
   { key: 'พร้อมนัดรับ',      icon: 'people-outline',        color: '#722ED1' },
-  { key: 'เสร็จสิ้น',       icon: 'bag-check-outline',      color: '#52C41A' },
+  { key: 'ยกเลิก',         icon: 'close-circle-outline',   color: '#FF4D4F' },
 ];
 
 const STATUS_STYLE = {
   'รอดำเนินการ':      { bg: '#FFF7E6', text: '#FA8C16' },
   'กำลังเตรียมสินค้า': { bg: '#E6F7FF', text: '#1890FF' },
   'พร้อมนัดรับ':      { bg: '#F9F0FF', text: '#722ED1' },
-  'เสร็จสิ้น':       { bg: '#F6FFED', text: '#52C41A' },
+  'เสร็จสิ้น':       { bg: '#F6FFED', text: '#52C41A' }, // still needed to render completed orders that buyers confirmed
+  'ยกเลิก':         { bg: '#FFF1F0', text: '#FF4D4F' },
 };
 
 // ===== MAIN COMPONENT =====

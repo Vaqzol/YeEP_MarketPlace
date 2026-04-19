@@ -10,15 +10,15 @@ import { COLORS } from '../../constants/theme';
 import { auth, db } from '../../config/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
-const TABS = ['ทั้งหมด', 'รอดำเนินการ', 'กำลังจัดส่ง', 'สำเร็จแล้ว', 'ยกเลิก'];
+const TABS = ['ทั้งหมด', 'รอดำเนินการ', 'รอรับสินค้า', 'สำเร็จแล้ว', 'ยกเลิก'];
 
 const STATUS_MAP = {
-  'รอดำเนินการ': { term: 'รอดำเนินการ', color: '#888' },
-  'กำลังเตรียมสินค้า': { term: 'กำลังจัดส่ง', color: '#4A7FB8' },
-  'พร้อมนัดรับ': { term: 'กำลังจัดส่ง', color: '#4A7FB8' },
-  'จัดส่งแล้ว': { term: 'สำเร็จแล้ว', color: '#27AE60' }, // ให้ตีความว่าถ้าร้านจัดส่งแล้ว หรือ รอรับของ
-  'เสร็จสิ้น': { term: 'สำเร็จแล้ว', color: '#27AE60' },
-  'ยกเลิก': { term: 'ยกเลิก', color: '#FF4D4F' }
+  'รอดำเนินการ': { term: 'รอดำเนินการ', tab: 'รอดำเนินการ', color: '#888' },
+  'กำลังเตรียมสินค้า': { term: 'กำลังเตรียมของ', tab: 'รอรับสินค้า', color: '#4A7FB8' },
+  'พร้อมนัดรับ': { term: 'พร้อมนัดรับ/ส่งของ', tab: 'รอรับสินค้า', color: '#4A7FB8' },
+  'จัดส่งแล้ว': { term: 'สำเร็จแล้ว', tab: 'สำเร็จแล้ว', color: '#27AE60' },
+  'เสร็จสิ้น': { term: 'สำเร็จแล้ว', tab: 'สำเร็จแล้ว', color: '#27AE60' },
+  'ยกเลิก': { term: 'ยกเลิก', tab: 'ยกเลิก', color: '#FF4D4F' }
 };
 
 export default function BuyerOrdersScreen() {
@@ -54,6 +54,7 @@ export default function BuyerOrdersScreen() {
         // เราใช้สถานะคำสั่งซื้อดั้งเดิม แล้วค่อย Map ไปแสดงผลให้คนซื้อดูง่ายๆ
         const originalStatus = data.status || 'รอดำเนินการ';
         const displayStatus = STATUS_MAP[originalStatus]?.term || originalStatus;
+        const tabCategory = STATUS_MAP[originalStatus]?.tab || originalStatus;
         const displayColor = STATUS_MAP[originalStatus]?.color || '#888';
 
         return {
@@ -65,6 +66,7 @@ export default function BuyerOrdersScreen() {
           qty: data.items?.length || 1, // Number of distinct items
           originalStatus: originalStatus,
           displayStatus: displayStatus,
+          tabCategory: tabCategory,
           statusColor: displayColor,
           isRated: data.isRated || false,
           createdAt: data.createdAt?.toDate() || new Date(),
@@ -130,15 +132,15 @@ export default function BuyerOrdersScreen() {
 
   // Filter Data
   const filteredOrders = orders.filter(order => {
-    const matchesTab = activeTab === 'ทั้งหมด' || order.displayStatus === activeTab;
+    const matchesTab = activeTab === 'ทั้งหมด' || order.tabCategory === activeTab;
     const matchesSearch = order.productName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
   const renderItem = ({ item }) => {
-    const isPending = item.displayStatus === 'รอดำเนินการ';
-    const isCompleted = item.displayStatus === 'สำเร็จแล้ว';
-    const isCancelled = item.displayStatus === 'ยกเลิก';
+    const isPending = item.originalStatus === 'รอดำเนินการ';
+    const isCompleted = item.tabCategory === 'สำเร็จแล้ว';
+    const isCancelled = item.originalStatus === 'ยกเลิก';
     
     // หากต้องการให้เฉพาะออเดอร์ที่ถูกจัดส่งแล้ว ถึงจะกดยืนยันรับได้, แต่ตอนนี้เรารวม "จัดส่งแล้ว" ไปที่ "สำเร็จแล้ว" 
     // ขอใช้เช็คจาก originalStatus ว่ามันเป็นอะไร หรือสมมติเลยว่าถ้าเพิ่งสั่งเสร็จ แต่ยังไม่ให้คะแนน
