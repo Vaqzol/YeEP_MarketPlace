@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { sendPushNotification } from '../../utils/notifications';
 
 const { width } = Dimensions.get('window');
 
@@ -110,6 +111,22 @@ export default function ChatScreen() {
         await setDoc(chatRef, chatUpdate);
       } else {
         await updateDoc(chatRef, chatUpdate);
+      }
+      // ส่ง Push Notification ไปหาคู่สนทนา (partner)
+      if (sellerId) {
+        try {
+          const partnerSnap = await getDoc(doc(db, 'users', sellerId));
+          const partnerToken = partnerSnap.data()?.expoPushToken;
+          const senderName = auth.currentUser?.displayName || 'ใครบัญชี';
+          if (partnerToken) {
+            await sendPushNotification(
+              partnerToken,
+              `ข้อความใหม่จาก YeEP 💬`,
+              image ? `${senderName} ส่งรูปภาพมาหาคุณ` : `${senderName}: ${messageContent}`,
+              { screen: 'chat', chatId }
+            );
+          }
+        } catch (_) { /* Non-critical */ }
       }
     } catch (error) {
       console.error(error);

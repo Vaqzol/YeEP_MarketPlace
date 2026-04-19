@@ -9,8 +9,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { auth, db } from '../../config/firebase';
 import {
-  collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp
+  collection, query, where, onSnapshot, doc, getDoc, updateDoc, serverTimestamp
 } from 'firebase/firestore';
+import { sendPushNotification } from '../../utils/notifications';
 
 // ===== ORDER MOCK DATA REMOVED (NOW USING REAL DATA) =====
 
@@ -43,6 +44,8 @@ export default function SellScreen() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [slipModalVisible, setSlipModalVisible] = useState(false);
+  const [slipImageUrl, setSlipImageUrl] = useState(null);
 
   // --- Real Stats Calculation ---
   const completedOrders = orders.filter(o => o.status === 'เสร็จสิ้น' || o.status === 'จัดส่งแล้ว');
@@ -117,6 +120,27 @@ export default function SellScreen() {
       await updateDoc(doc(db, 'orders', selectedOrder.id), {
         status: newStatus, updatedAt: serverTimestamp()
       });
+
+      // ส่ง Push Notification ไปหาคนซื้อ
+      if (selectedOrder.buyerId) {
+        try {
+          const buyerSnap = await getDoc(doc(db, 'users', selectedOrder.buyerId));
+          const buyerToken = buyerSnap.data()?.expoPushToken;
+          if (buyerToken) {
+            const statusMsg = {
+              'กำลังเตรียมสินค้า': '📦 กำลังเตรียมของให้คุณแล้ว!',
+              'พร้อมนัดรับ': '🎉 สินค้าพร้อมให้นัดรับ/ส่งแล้ว!',
+              'ยกเลิก': '❌ คำสั่งซื้อถูกยกเลิกโดยผู้ขาย',
+            };
+            await sendPushNotification(
+              buyerToken,
+              'YeEP Marketplace 🛒',
+              statusMsg[newStatus] || `สถานะคำสั่งซื้ออัปเดตเป็น: ${newStatus}`,
+              { screen: 'orders' }
+            );
+          }
+        } catch (_) { /* Non-critical: don't block if notification fails */ }
+      }
     } catch (e) { Alert.alert('เกิดข้อผิดพลาด', e.message); }
     finally { setUpdatingStatus(false); setSelectedOrder(null); }
   };
@@ -196,16 +220,28 @@ export default function SellScreen() {
               <Ionicons name="location-outline" size={14} color={COLORS.primary} />
               <Text style={styles.orderLocationText} numberOfLines={2}>{item.location}</Text>
             </View>
-            {isCompleted ? (
-              <View style={styles.completedBtn}>
-                <Text style={styles.completedBtnText}>จัดเก็บรายการแล้ว</Text>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.updateBtn} onPress={() => openStatusModal(item)}>
-                <Ionicons name="create-outline" size={16} color="white" />
-                <Text style={styles.updateBtnText}>อัปเดตสถานะ</Text>
-              </TouchableOpacity>
-            )}
+            {/* Slip + Update Buttons */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {item.slipImage && (
+                <TouchableOpacity
+                  style={[styles.updateBtn, { flex: 1, backgroundColor: '#F0F6FF', borderWidth: 1, borderColor: COLORS.primary }]}
+                  onPress={() => { setSlipImageUrl(item.slipImage); setSlipModalVisible(true); }}
+                >
+                  <Ionicons name="receipt-outline" size={16} color={COLORS.primary} />
+                  <Text style={[styles.updateBtnText, { color: COLORS.primary }]}>ดูสลิป</Text>
+                </TouchableOpacity>
+              )}
+              {isCompleted ? (
+                <View style={[styles.completedBtn, { flex: 1 }]}>
+                  <Text style={styles.completedBtnText}>จัดเก็บรายการแล้ว</Text>
+                </View>
+              ) : (
+                <TouchableOpacity style={[styles.updateBtn, { flex: 1 }]} onPress={() => openStatusModal(item)}>
+                  <Ionicons name="create-outline" size={16} color="white" />
+                  <Text style={styles.updateBtnText}>อัปเดตสถานะ</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         );
       })}
@@ -383,6 +419,32 @@ export default function SellScreen() {
               }
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Slip Fullscreen Modal */}
+      <Modal visible={slipModalVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: 8 }}
+            onPress={() => setSlipModalVisible(false)}
+          >
+            <Ionicons name="close" size={28} color="white" />
+          </TouchableOpacity>
+          <Text style={{ color: '#AAA', marginBottom: 12, fontSize: 13 }}>สลิปโอนเงินจากลูกค้า</Text>
+          {slipImageUrl && (
+            <Image
+              source={{ uri: slipImageUrl }}
+              style={{ width: '90%', height: '70%', borderRadius: 12 }}
+              resizeMode="contain"
+            />
+          )}
+          <TouchableOpacity
+            style={{ marginTop: 20, backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 10 }}
+            onPress={() => setSlipModalVisible(false)}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15 }}>ปิด</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>

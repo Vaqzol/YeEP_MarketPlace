@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, 
-  Image, TextInput, ActivityIndicator, Alert, Modal
+  Image, TextInput, ActivityIndicator, Alert, Modal, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { auth, db } from '../../config/firebase';
-import { collection, query, where, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const TABS = ['ทั้งหมด', 'รอดำเนินการ', 'รอรับสินค้า', 'สำเร็จแล้ว', 'ยกเลิก'];
 
@@ -33,6 +33,13 @@ export default function BuyerOrdersScreen() {
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  
+  // Rating Modal States
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [ratingOrderId, setRatingOrderId] = useState(null);
+  const [ratingProductId, setRatingProductId] = useState(null);
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -119,14 +126,30 @@ export default function BuyerOrdersScreen() {
     }
   };
 
-  const handleRate = async (orderId) => {
+  const openRatingModal = (item) => {
+    setRatingOrderId(item.id);
+    setRatingStars(5);
+    setRatingComment('');
+    setRatingModalVisible(true);
+  };
+
+  const submitRating = async () => {
+    if (!ratingOrderId) return;
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        isRated: true
+      await addDoc(collection(db, 'reviews'), {
+        orderId: ratingOrderId,
+        buyerId: auth.currentUser?.uid,
+        buyerName: auth.currentUser?.displayName || 'ลูกค้า',
+        rating: ratingStars,
+        comment: ratingComment.trim(),
+        createdAt: serverTimestamp(),
       });
-      Alert.alert('ขอบคุณ! 🌟', 'คุณให้คะแนนสินค้านี้ 5 ดาวเรียบร้อยแล้ว');
+      await updateDoc(doc(db, 'orders', ratingOrderId), { isRated: true });
+      setRatingModalVisible(false);
+      Alert.alert('ขอบคุณ! 🌟', `คุณให้คะแนน ${ratingStars} ดาวเรียบร้อยแล้วครับ`);
     } catch (err) {
       console.error(err);
+      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถส่งรีวิวได้');
     }
   };
 
@@ -198,10 +221,10 @@ export default function BuyerOrdersScreen() {
             <View style={styles.rowActions}>
               <TouchableOpacity 
                 style={[styles.secondaryBtnFixed, item.isRated && { borderColor: '#C0C0C0', backgroundColor: '#F5F5F5' }]} 
-                onPress={() => !item.isRated && handleRate(item.id)}
+                onPress={() => !item.isRated && openRatingModal(item)}
               >
                 <Text style={[styles.secondaryBtnTextFixed, item.isRated && { color: '#A0A0A0' }]}>
-                  {item.isRated ? '✓ ให้คะแนนแล้ว' : 'ให้คะแนน'}
+                  {item.isRated ? '✓ ให้คะแนนแล้ว' : '⭐ ให้คะแนน'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.secondaryBtnFixed}>
@@ -316,6 +339,51 @@ export default function BuyerOrdersScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtnRow, { backgroundColor: '#A2BEDF' }]} onPress={() => setConfirmModalVisible(false)}>
                 <Text style={styles.modalBtnTextCancel}>ย้อนกลับ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Rating Modal */}
+      <Modal transparent visible={ratingModalVisible} animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: 30 }]}>
+            <Text style={[styles.modalTitle, { marginBottom: 8 }]}>⭐ ให้คะแนนสินค้า</Text>
+            <Text style={{ textAlign: 'center', color: '#888', marginBottom: 20 }}>ความคิดเห็นของคุณช่วยให้คนอื่นตัดสินใจได้ครับ 🙏</Text>
+            
+            {/* Star Selector */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20, gap: 8 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <TouchableOpacity key={star} onPress={() => setRatingStars(star)}>
+                  <Text style={{ fontSize: 38 }}>{star <= ratingStars ? '⭐' : '☆'}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ textAlign: 'center', color: '#6C94C1', fontWeight: 'bold', marginBottom: 16 }}>
+              {ratingStars === 1 ? 'แย่มาก' : ratingStars === 2 ? 'พอใช้ได้' : ratingStars === 3 ? 'เป็นสิ' : ratingStars === 4 ? 'ดีมาก' : 'ยอดเยี่ยม!'}
+            </Text>
+
+            {/* Comment Input */}
+            <TextInput
+              style={{
+                borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
+                padding: 12, minHeight: 80, textAlignVertical: 'top',
+                fontSize: 14, color: '#333', backgroundColor: '#FAFAFA', marginBottom: 20
+              }}
+              placeholder="เขียนความคิดเห็นเพิ่มเติม..."
+              placeholderTextColor="#AAA"
+              value={ratingComment}
+              onChangeText={setRatingComment}
+              multiline
+            />
+
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity style={[styles.modalBtnRow, { backgroundColor: '#6C94C1' }]} onPress={submitRating}>
+                <Text style={styles.modalBtnTextCancel}>ส่งรีวิว</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtnRow, { backgroundColor: '#DDD' }]} onPress={() => setRatingModalVisible(false)}>
+                <Text style={[styles.modalBtnTextCancel, { color: '#555' }]}>ยกเลิก</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { auth, db } from '../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { registerForPushNotifications } from '../utils/notifications';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -14,6 +15,9 @@ export default function RootLayout() {
       if (user) {
         // อัปเดตครั้งแรกเมื่อ Login
         updateLastSeen(user.uid);
+        
+        // ลงทะเบียน Push Token
+        registerForPushNotifications();
         
         // Setup Interval ทุกๆ 3 นาที (180,000 ms)
         if (interval) clearInterval(interval);
