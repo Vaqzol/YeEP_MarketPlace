@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { auth, db } from '../../config/firebase';
-import { collection, query, getDocs, doc, getDoc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
@@ -106,9 +106,20 @@ export default function CheckoutScreen() {
         createdAt: serverTimestamp(),
       });
 
-      // 2. เคลียร์ตะกร้าสินค้า
+      // 2. เคลียร์ตะกร้าสินค้า และ ลดสต็อกสินค้า
       for (const item of cartItems) {
+        // เคลียร์ตะกร้า
         await deleteDoc(doc(db, 'carts', auth.currentUser.uid, 'items', item.id));
+        // ลดสต็อกตามจำนวนที่สั่งซื้อ
+        if (item.productId) {
+          try {
+            await updateDoc(doc(db, 'products', item.productId), {
+              stock: increment(-(item.qty || 1))
+            });
+          } catch (e) {
+            console.log('Error deducting stock', e);
+          }
+        }
       }
 
       // 3. ไปยังหน้าสำเร็จ

@@ -49,7 +49,8 @@ export default function HomeScreen() {
       const prods = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).filter(prod => typeof prod.stock === 'number' ? prod.stock > 0 : true); // if stock is missing, assume true for backwards compat, else must be > 0
+
       setProducts(prods);
       setLoading(false);
     });

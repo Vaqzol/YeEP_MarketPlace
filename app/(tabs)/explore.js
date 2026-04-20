@@ -49,7 +49,8 @@ export default function ExploreScreen() {
       const prods = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).filter(prod => typeof prod.stock === 'number' ? prod.stock > 0 : true);
+      
       setProducts(prods);
       setLoading(false);
     });
