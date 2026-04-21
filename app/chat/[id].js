@@ -197,6 +197,7 @@ export default function ChatScreen() {
 
   // ตรวจสอบสถานะออนไลน์
   const getOnlineStatus = () => {
+    if (sellerId === 'admin') return { online: true, text: 'SUPPORT' };
     if (!partner?.lastSeen) return { online: false, text: 'OFFLINE' };
 
     const lastSeenDate = partner.lastSeen.toDate();

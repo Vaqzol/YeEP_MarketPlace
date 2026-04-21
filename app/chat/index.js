@@ -58,6 +58,17 @@ export default function ChatListScreen() {
   }, [auth.currentUser]);
 
   const fetchPartnerInfo = async (uid) => {
+    if (uid === 'admin') {
+      setUsersInfo(prev => ({
+        ...prev,
+        [uid]: {
+          firstName: 'แอดมิน',
+          lastName: 'YeEP',
+          profileImage: 'https://cdn-icons-png.flaticon.com/512/6124/6124997.png'
+        }
+      }));
+      return;
+    }
     try {
       const userRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userRef);
