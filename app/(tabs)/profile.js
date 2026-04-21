@@ -118,9 +118,6 @@ export default function ProfileScreen() {
         <YeepLogo size={24} />
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
             <Ionicons name="cart-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
