@@ -86,8 +86,11 @@ export default function HomeScreen() {
         <YeepLogo size={24} />
 
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="heart-outline" size={24} color={COLORS.text} />
+          <TouchableOpacity 
+            style={styles.iconBtn}
+            onPress={() => router.push('/notifications')}
+          >
+            <Ionicons name="notifications-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.iconBtn}

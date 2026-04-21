@@ -249,7 +249,6 @@
               </label>
               <input type="text" id="chatReplyInput" placeholder="พิมพ์ข้อความ..." onkeydown="if(event.key==='Enter')sendSupportReply()" />
               <button class="btn btn-primary-solid btn-sm" onclick="sendSupportReply()">ส่ง</button>
-              <button class="btn btn-success btn-sm" onclick="closeTicket()" id="closeTicketBtn">✓ ปิดเรื่อง</button>
             </div>
           </div>
           <div class="card" id="supportPlaceholder" style="display:flex;align-items:center;justify-content:center">
@@ -682,7 +681,37 @@ function renderReviewGrid() {
 function filterReview() { renderReviewGrid(); }
 
 async function approveProduct(id) {
+  const product = allReviewProducts.find(p => p.id === id);
   await db.collection('products').doc(id).update({ status: 'พร้อมขาย' });
+  
+  if (product && product.sellerId) {
+    try {    
+      await db.collection('notifications').add({
+        userId: product.sellerId,
+        type: 'approve',
+        title: 'อนุมัติสินค้าแล้ว',
+        body: `สินค้า "${product.name}" ของคุณผ่านการตรวจสอบแล้ว`,
+        productId: id,
+        productImage: product.images?.[0] || null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        read: false
+      });
+      
+      const sellerSnap = await db.collection('users').doc(product.sellerId).get();
+      if (sellerSnap.exists && sellerSnap.data().expoPushToken) {
+        fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: sellerSnap.data().expoPushToken,
+            title: 'สินค้าผ่านการอนุมัติ ✅',
+            body: `สินค้า "${product.name}" ของคุณผ่านการตรวจสอบและลงขายบน YeEP แล้ว`
+          })
+        }).catch(console.error);
+      }
+    } catch(e) {}
+  }
+  
   showToast('✅ อนุมัติสินค้าแล้ว', 'success');
 }
 
@@ -697,25 +726,67 @@ async function confirmReject() {
 
   if (sellerId) {
     const adminName = `${currentAdminData?.firstName || ''} ${currentAdminData?.lastName || ''}`.trim() || 'แอดมิน';
-    const msgText = `สินค้า "${product?.name || 'ของคุณ'}" ไม่ผ่านการตรวจสอบให้ลงขาย\n\nเหตุผล: ${reason}\n\nหากมีข้อสงสัยสามารถพิมพ์สอบถามได้ที่นี่เลยครับ`;
     
-    // Create new support ticket from Admin
-    const ticketRef = await db.collection('support_tickets').add({
+    let sellerName = sellerId;
+    let expoPushToken = null;
+    try {
+      const sellerSnap = await db.collection('users').doc(sellerId).get();
+      if (sellerSnap.exists) {
+        const sData = sellerSnap.data();
+        sellerName = `${sData.firstName || ''} ${sData.lastName || ''}`.trim() || sellerId;
+        expoPushToken = sData.expoPushToken;
+      }
+    } catch(e){}
+
+    const msgText = `สินค้า "${product?.name || 'ของคุณ'}" ไม่ผ่านการตรวจสอบให้ลงขาย\n\nเหตุผล: ${reason}\n\nหากมีข้อสงสัยสามารถพิมพ์สอบถามต่อได้ที่นี่เลยครับ`;
+    
+    // 1. Create a notification record
+    await db.collection('notifications').add({
       userId: sellerId,
-      userName: sellerId, 
-      subject: `แจ้งเตือน: สินค้าไม่อนุมัติ`,
-      status: 'open',
-      lastMessage: msgText,
+      type: 'reject',
+      title: 'สินค้าไม่อนุมัติ',
+      body: `สินค้า "${product?.name || ''}" ไม่ผ่านตรวจสอบ เหตุผล: ${reason}`,
+      productId: rejectTargetId,
+      productImage: product?.images?.[0] || null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false
     });
+
+    // 2. Chat setup: The consistent chatId between user and admin
+    const chatParts = [sellerId, 'admin'].sort();
+    const chatId = chatParts.join('_');
+    const chatRef = db.collection('chats').doc(chatId);
     
-    await ticketRef.collection('messages').add({
+    const chatSnap = await chatRef.get();
+    const chatUpdate = {
+      participants: chatParts,
+      lastMessage: msgText,
+      lastSenderId: 'admin',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!chatSnap.exists) {
+      await chatRef.set(chatUpdate);
+    } else {
+      await chatRef.update(chatUpdate);
+    }
+
+    await chatRef.collection('messages').add({
       text: msgText,
-      senderRole: 'admin',
-      senderName: adminName,
+      senderId: 'admin',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
+    if (expoPushToken) {
+      fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: expoPushToken,
+          title: 'แจ้งเตือนระบบ ⚠️',
+          body: `หน้าต่างแจ้งเตือนใหม่: สินค้า "${product?.name || ''}" ไม่ผ่านการตรวจสอบ`
+        })
+      }).catch(err => console.log('Push error:', err));
+    }
   }
 
   closeModal('rejectModal'); rejectTargetId = null;
@@ -880,9 +951,10 @@ async function quickBanUser(id, currentStatus) {
 
 // =================== SUPPORT / TICKETS ===================
 function listenSupport() {
-  db.collection('support_tickets').orderBy('createdAt', 'desc').onSnapshot(snap => {
-    allTickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const unread = allTickets.filter(t => t.status === 'open').length;
+  db.collection('chats').where('participants', 'array-contains', 'admin').onSnapshot(snap => {
+    // sort locally since we query by array-contains
+    allTickets = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.updatedAt?.seconds||0) - (a.updatedAt?.seconds||0));
+    const unread = allTickets.filter(t => t.lastSenderId !== 'admin').length;
     const badge = document.getElementById('supportBadge');
     badge.textContent = unread; badge.style.display = unread > 0 ? 'inline' : 'none';
     document.getElementById('notifDot').style.display = unread > 0 ? 'block' : 'none';
@@ -890,30 +962,49 @@ function listenSupport() {
   });
 }
 
-function renderTicketList() {
+const getUserNameForChat = async (uid) => {
+  if (!uid) return 'ไม่ระบุชื่อ';
+  try {
+    const snap = await db.collection('users').doc(uid).get();
+    if(snap.exists) return `${snap.data().firstName||''} ${snap.data().lastName||''}`.trim();
+  } catch(e){}
+  return uid;
+};
+
+async function renderTicketList() {
   const el = document.getElementById('ticketList');
   if (allTickets.length === 0) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">✉️</div><p>ยังไม่มีเรื่องร้องเรียน</p></div>'; return;
   }
-  el.innerHTML = allTickets.map(t => `
-    <div class="ticket-item ${t.status==='open'?'unread':''}" onclick="openTicket('${t.id}')">
-      <div style="font-size:24px">${t.status==='open'?'🔴':'✅'}</div>
+  
+  // Need to resolve user names since chats don't store userName
+  let html = '';
+  for (let t of allTickets) {
+    const partnerId = t.participants?.find(p => p !== 'admin');
+    const partnerName = await getUserNameForChat(partnerId);
+    const isUnread = t.lastSenderId !== 'admin';
+    html += `
+    <div class="ticket-item ${isUnread?'unread':''}" onclick="openTicket('${t.id}', '${partnerId}')">
+      <div style="font-size:24px">${isUnread?'🔴':'✅'}</div>
       <div class="ticket-meta">
-        <div class="ticket-subject">${t.subject || 'ไม่ระบุหัวข้อ'}</div>
+        <div class="ticket-subject">พูดคุยกับ: ${partnerName}</div>
         <div class="ticket-preview">${t.lastMessage || '—'}</div>
       </div>
-      <div class="ticket-time">${t.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</div>
-    </div>`).join('');
+      <div class="ticket-time">${t.updatedAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
 }
 
-function openTicket(id) {
+async function openTicket(id, partnerId) {
   currentTicketId = id;
   const ticket = allTickets.find(t => t.id === id);
   if (!ticket) return;
-  document.getElementById('chatTicketSubject').textContent = ticket.subject || 'ไม่ระบุหัวข้อ';
-  document.getElementById('chatTicketUser').textContent = ticket.userName || ticket.userEmail || '—';
-  document.getElementById('chatTicketStatus').textContent = ticket.status === 'open' ? '🔴 เปิดอยู่' : '✅ ปิดแล้ว';
-  document.getElementById('chatTicketStatus').className = `badge ${ticket.status === 'open' ? 'badge-danger' : 'badge-success'}`;
+  const partnerName = await getUserNameForChat(partnerId);
+
+  document.getElementById('chatTicketSubject').textContent = 'พูดคุย';
+  document.getElementById('chatTicketUser').textContent = partnerName;
+  document.getElementById('chatTicketStatus').style.display = 'none'; // Hide status
   document.getElementById('supportPlaceholder').style.display = 'none';
   const chatPanel = document.getElementById('supportChatPanel');
   chatPanel.style.display = 'flex'; chatPanel.style.flexDirection = 'column';
@@ -921,11 +1012,11 @@ function openTicket(id) {
 }
 
 function loadTicketMessages(id) {
-  db.collection('support_tickets').doc(id).collection('messages').orderBy('createdAt').onSnapshot(snap => {
+  db.collection('chats').doc(id).collection('messages').orderBy('createdAt').onSnapshot(snap => {
     const el = document.getElementById('chatMessages');
     el.innerHTML = snap.docs.map(d => {
       const msg = d.data();
-      const isAdmin = msg.senderRole === 'admin';
+      const isAdmin = msg.senderId === 'admin';
       const time = msg.createdAt?.toDate?.()?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) || '';
       let bubbleContent = '';
       if (msg.image) bubbleContent += `<img src="${msg.image}" style="max-width:200px;border-radius:6px;margin-bottom:6px;display:block"/>`;
@@ -961,31 +1052,45 @@ async function sendSupportReply() {
   input.value = '';
   input.placeholder = 'พิมพ์ข้อความ...';
   
-  const adminName = `${currentAdminData?.firstName || ''} ${currentAdminData?.lastName || ''}`.trim() || 'แอดมิน';
   const imgData = pendingSupportImage;
   pendingSupportImage = null;
   document.getElementById('chatImageInput').value = '';
 
   const msgPayload = {
-    senderRole: 'admin', 
-    senderName: adminName, 
+    senderId: 'admin', 
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (text) msgPayload.text = text;
   if (imgData) msgPayload.image = imgData;
 
-  await db.collection('support_tickets').doc(currentTicketId).collection('messages').add(msgPayload);
-  await db.collection('support_tickets').doc(currentTicketId).update({
+  await db.collection('chats').doc(currentTicketId).collection('messages').add(msgPayload);
+  await db.collection('chats').doc(currentTicketId).update({
     lastMessage: text || 'ส่งรูปภาพ 🖼️', 
+    lastSenderId: 'admin',
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+
+  // Push Notification to User
+  try {
+    const chatSnap = await db.collection('chats').doc(currentTicketId).get();
+    if(chatSnap.exists) {
+      const uId = chatSnap.data().participants?.find(p => p !== 'admin');
+      const uSnap = await db.collection('users').doc(uId).get();
+      if(uSnap.exists && uSnap.data().expoPushToken) {
+        fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: uSnap.data().expoPushToken,
+            title: 'ข้อความใหม่จากแอดมิน 💬',
+            body: text || 'แอดมินส่งรูปภาพให้คุณ'
+          })
+        }).catch(e=>{});
+      }
+    }
+  } catch(e){}
 }
 
-async function closeTicket() {
-  if (!currentTicketId) return;
-  await db.collection('support_tickets').doc(currentTicketId).update({ status: 'resolved' });
-  showToast('✅ ปิดเรื่องร้องเรียนแล้ว', 'success');
-}
 
 // =================== ANALYTICS ===================
 async function loadAnalyticsChart() {

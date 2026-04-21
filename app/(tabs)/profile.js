@@ -188,7 +188,10 @@ export default function ProfileScreen() {
             <Text style={styles.blueBtnText}>ประวัติการสั่งซื้อ</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.blueBtn, { backgroundColor: '#5B7FC4' }]} onPress={() => router.push('/support')}>
+          <TouchableOpacity style={[styles.blueBtn, { backgroundColor: '#5B7FC4' }]} onPress={() => router.push({
+            pathname: `/chat/${[auth.currentUser.uid, 'admin'].sort().join('_')}`,
+            params: { sellerId: 'admin' }
+          })}>
             <Text style={styles.blueBtnText}>💬 ติดต่อแอดมิน</Text>
           </TouchableOpacity>
 

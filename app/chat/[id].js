@@ -45,7 +45,13 @@ export default function ChatScreen() {
         }
 
         // ดึงข้อมูลผู้รับ (Partner) แบบ Real-time เพื่อดูสถานะ Online
-        if (sellerId) {
+        if (sellerId === 'admin') {
+          setPartner({
+            firstName: 'แอดมิน',
+            lastName: 'YeEP',
+            profileImage: 'https://cdn-icons-png.flaticon.com/512/6124/6124997.png'
+          });
+        } else if (sellerId) {
           const userRef = doc(db, 'users', sellerId);
           partnerUnsubscribe = onSnapshot(userRef, (snap) => {
             if (snap.exists()) {
