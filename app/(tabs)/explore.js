@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 import { db, auth } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +42,7 @@ export default function ExploreScreen() {
   useEffect(() => {
     const q = query(
       collection(db, 'products'),
+      where('status', '==', 'พร้อมขาย'),
       orderBy('createdAt', 'desc')
     );
 

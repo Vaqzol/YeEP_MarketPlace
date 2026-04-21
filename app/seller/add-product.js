@@ -127,8 +127,9 @@ export default function AddProductScreen() {
         stock: parseInt(stock),
         description,
         location,
-        coords: markerCoords, // เพิ่มพิกัด (lat, lng)
-        images: base64Images, // เซฟ Text รูปภาพยาวๆ ลง Database เลย
+        coords: markerCoords,
+        images: base64Images,
+        status: 'รอตรวจสอบ', // Admin ต้อง approve ก่อนโชว์ใน marketplace
         createdAt: serverTimestamp(),
       });
 

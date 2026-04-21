@@ -42,6 +42,7 @@ export default function HomeScreen() {
     // 1. ดึงรายการผลิตภัณฑ์แบบ Real-time
     const q = query(
       collection(db, 'products'),
+      where('status', '==', 'พร้อมขาย'),
       orderBy('createdAt', 'desc')
     );
 
@@ -49,7 +50,7 @@ export default function HomeScreen() {
       const prods = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })).filter(prod => typeof prod.stock === 'number' ? prod.stock > 0 : true); // if stock is missing, assume true for backwards compat, else must be > 0
+      })).filter(prod => typeof prod.stock === 'number' ? prod.stock > 0 : true);
 
       setProducts(prods);
       setLoading(false);

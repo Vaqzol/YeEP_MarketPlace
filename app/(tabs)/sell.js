@@ -67,7 +67,9 @@ export default function SellScreen() {
       const prods = snap.docs.map(d => {
         const data = d.data();
         let status = 'ใช้งานอยู่'; let sColor = '#E6F7ED'; let tColor = '#27AE60';
-        if (data.stock === 0)     { status = 'หมด';       sColor = '#F0F2F5'; tColor = '#8A97A8'; }
+        if (data.status === 'รอตรวจสอบ') { status = 'รออนุมัติ'; sColor = '#FFF7E6'; tColor = '#FAAD14'; }
+        else if (data.status === 'ถูกปฏิเสธ') { status = 'ไม่อนุมัติ ❌'; sColor = '#FFF1F0'; tColor = '#FF4D4F'; }
+        else if (data.stock === 0)     { status = 'หมด';       sColor = '#F0F2F5'; tColor = '#8A97A8'; }
         else if (data.stock < 5) { status = 'สต็อกต่ำ'; sColor = '#FFF7E6'; tColor = '#FAAD14'; }
         return {
           id: d.id, name: data.name, stock: data.stock, views: data.views || 0,

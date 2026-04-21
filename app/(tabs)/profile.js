@@ -188,6 +188,10 @@ export default function ProfileScreen() {
             <Text style={styles.blueBtnText}>ประวัติการสั่งซื้อ</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={[styles.blueBtn, { backgroundColor: '#5B7FC4' }]} onPress={() => router.push('/support')}>
+            <Text style={styles.blueBtnText}>💬 ติดต่อแอดมิน</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.blueBtn} onPress={handleLogout}>
             <Text style={styles.blueBtnText}>ออกจากระบบ</Text>
           </TouchableOpacity>

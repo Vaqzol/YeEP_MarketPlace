@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YeEP Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">🛒</div>
+      <div>
+        <h2>YeEP Admin</h2>
+        <p>ศูนย์ควบคุม</p>
+      </div>
+    </div>
+
+    <span class="nav-section-label">เมนูหลัก</span>
+    <button class="nav-item active" data-tab="overview">
+      <span class="nav-icon">📊</span> ภาพรวม
+    </button>
+    <button class="nav-item" data-tab="review">
+      <span class="nav-icon">🔍</span> การตรวจสอบ
+      <span class="nav-badge" id="reviewBadge" style="display:none">0</span>
+    </button>
+    <button class="nav-item" data-tab="products">
+      <span class="nav-icon">📦</span> รายการสินค้า
+    </button>
+    <button class="nav-item" data-tab="users">
+      <span class="nav-icon">👥</span> จัดการผู้ใช้งาน
+    </button>
+    <button class="nav-item" data-tab="support">
+      <span class="nav-icon">💬</span> รับเรื่องร้องเรียน
+      <span class="nav-badge" id="supportBadge" style="display:none">0</span>
+    </button>
+
+    <span class="nav-section-label">ระบบ</span>
+    <button class="nav-item" data-tab="analytics">
+      <span class="nav-icon">📈</span> การวิเคราะห์
+    </button>
+    <button class="nav-item" data-tab="settings">
+      <span class="nav-icon">⚙️</span> ตั้งค่า
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-admin">
+        <div class="admin-avatar" id="adminAvatar">A</div>
+        <div class="admin-info">
+          <div class="admin-name" id="adminName">Loading...</div>
+          <div class="admin-role">ผู้ดูแลระบบ</div>
+        </div>
+        <button class="btn-logout" title="ออกจากระบบ" id="logoutBtn">🚪</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <header class="top-header">
+      <div class="page-title">
+        <h1 id="pageTitle">ภาพรวม</h1>
+        <p id="pageSubtitle">สรุปสถานะและกิจกรรมของระบบในวันนี้</p>
+      </div>
+      <div class="header-actions">
+        <div class="btn-icon" id="notifBtn" title="การแจ้งเตือน">
+          🔔<span class="notif-dot" id="notifDot" style="display:none"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-content">
+      <!-- ========================= TAB: OVERVIEW ========================= -->
+      <div id="tab-overview" class="tab-content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">รายได้ทั้งหมด</div></div>
+              <div class="stat-icon" style="background:#EEF2FB">💰</div>
+            </div>
+            <div class="stat-value" id="statRevenue">—</div>
+            <div class="stat-change neutral" id="statRevenueChange">กำลังโหลด...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">ผู้ใช้งานทั้งหมด</div></div>
+              <div class="stat-icon" style="background:#F0FFF4">👤</div>
+            </div>
+            <div class="stat-value" id="statUsers">—</div>
+            <div class="stat-change up" id="statUsersChange">กำลังโหลด...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">รอการตรวจสอบ</div></div>
+              <div class="stat-icon" style="background:#FFF7E6">🔍</div>
+            </div>
+            <div class="stat-value" id="statPending">—</div>
+            <div class="stat-change" id="statPendingChange">สินค้ารอ Approve</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">คำสั่งซื้อทั้งหมด</div></div>
+              <div class="stat-icon" style="background:#FFF2F2">🛒</div>
+            </div>
+            <div class="stat-value" id="statOrders">—</div>
+            <div class="stat-change neutral" id="statOrdersChange">กำลังโหลด...</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 400px;gap:20px;">
+          <!-- Chart -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">กิจกรรมการตลาด</div>
+                <div class="card-subtitle">จำนวนคำสั่งซื้อย้อนหลัง 30 วัน</div>
+              </div>
+              <select class="filter-select" id="chartPeriod" style="width:auto">
+                <option value="30">30 วันล่าสุด</option>
+                <option value="7">7 วันล่าสุด</option>
+              </select>
+            </div>
+            <div class="chart-container"><canvas id="overviewChart"></canvas></div>
+          </div>
+
+          <!-- Quick Review Queue -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">⚠️ รายการรอการตรวจสอบ</div>
+              </div>
+              <button class="btn btn-xs btn-primary-solid" onclick="switchTab('review')">ดูทั้งหมด</button>
+            </div>
+            <div id="quickReviewList">
+              <div class="empty-state" style="padding:24px"><div class="empty-icon">✅</div><p>ไม่มีสินค้ารอตรวจสอบ</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================= TAB: REVIEW ========================= -->
+      <div id="tab-review" class="tab-content" style="display:none">
+        <div class="card" style="margin-bottom:20px">
+          <div class="filter-row">
+            <div class="search-bar" style="max-width:360px">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="reviewSearch" placeholder="ค้นหาชื่อสินค้าหรือผู้ขาย..." oninput="filterReview()" />
+            </div>
+            <div id="reviewCategoryFilter" class="filter-row" style="flex-wrap:wrap"></div>
+          </div>
+        </div>
+        <div id="reviewGrid" class="product-cards-grid"></div>
+        <div id="reviewLoadMore" style="text-align:center;margin-top:20px;display:none">
+          <button class="btn btn-secondary" onclick="loadMoreReview()">แสดงสินค้าเพิ่มเติม</button>
+        </div>
+      </div>
+
+      <!-- ========================= TAB: PRODUCTS ========================= -->
+      <div id="tab-products" class="tab-content" style="display:none">
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header" style="margin-bottom:16px">
+            <div>
+              <div class="card-title">รายการสินค้าทั้งหมดที่อนุมัติแล้ว</div>
+              <div class="card-subtitle" id="productsTotalLabel">รวมทั้งหมด 0 รายการ</div>
+            </div>
+          </div>
+          <div class="filter-row">
+            <div class="search-bar" style="max-width:360px">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="productsSearch" placeholder="ค้นหาชื่อสินค้าหรือผู้ขาย..." oninput="filterProducts()" />
+            </div>
+            <select class="filter-select" id="productsCatFilter" onchange="filterProducts()"><option value="">ทุกหมวดหมู่สินค้า</option></select>
+            <select class="filter-select" id="productsSort" onchange="filterProducts()">
+              <option value="newest">วันที่: ล่าสุด</option>
+              <option value="oldest">วันที่: เก่าสุด</option>
+              <option value="price-asc">ราคา: น้อย-มาก</option>
+              <option value="price-desc">ราคา: มาก-น้อย</option>
+            </select>
+          </div>
+        </div>
+        <div id="productsGrid" class="product-cards-grid"></div>
+        <div class="pagination" id="productsPagination"></div>
+      </div>
+
+      <!-- ========================= TAB: USERS ========================= -->
+      <div id="tab-users" class="tab-content" style="display:none">
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header" style="margin-bottom:16px">
+            <div class="card-title">จัดการผู้ใช้งานทั้งหมด</div>
+          </div>
+          <div class="filter-row">
+            <div class="search-bar" style="flex:1;max-width:400px">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="usersSearch" placeholder="ค้นหา ชื่อผู้ใช้ หรืออีเมล..." oninput="filterUsers()" />
+            </div>
+            <div class="filter-row" id="userRoleFilter">
+              <button class="filter-chip active" data-role="">ทั้งหมด</button>
+              <button class="filter-chip" data-role="buyer">ผู้ซื้อ</button>
+              <button class="filter-chip" data-role="seller">ผู้ขาย</button>
+              <button class="filter-chip" data-role="admin">แอดมิน</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ผู้ใช้งาน</th>
+                <th>บทบาท</th>
+                <th>สถานะ</th>
+                <th>วันที่เข้าร่วม</th>
+                <th>การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+          <div class="pagination" id="usersPagination"></div>
+        </div>
+      </div>
+
+      <!-- ========================= TAB: SUPPORT ========================= -->
+      <div id="tab-support" class="tab-content" style="display:none">
+        <div style="display:grid;grid-template-columns:360px 1fr;gap:20px;height:calc(100vh - 160px)">
+          <!-- Ticket List -->
+          <div class="card" style="overflow-y:auto">
+            <div class="card-header">
+              <div class="card-title">💬 รับเรื่องร้องเรียน</div>
+            </div>
+            <div id="ticketList"></div>
+          </div>
+          <!-- Chat Window -->
+          <div class="card" id="supportChatPanel" style="display:none;flex-direction:column">
+            <div class="card-header" id="chatHeader">
+              <div>
+                <div class="card-title" id="chatTicketSubject">—</div>
+                <div class="card-subtitle" id="chatTicketUser">—</div>
+              </div>
+              <span class="badge" id="chatTicketStatus"></span>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row" style="align-items:center">
+              <label class="btn btn-secondary btn-sm" style="padding:10px;cursor:pointer" title="แนบรูปภาพ">
+                🖼️
+                <input type="file" id="chatImageInput" accept="image/*" style="display:none" onchange="previewSupportImage(event)" />
+              </label>
+              <input type="text" id="chatReplyInput" placeholder="พิมพ์ข้อความ..." onkeydown="if(event.key==='Enter')sendSupportReply()" />
+              <button class="btn btn-primary-solid btn-sm" onclick="sendSupportReply()">ส่ง</button>
+              <button class="btn btn-success btn-sm" onclick="closeTicket()" id="closeTicketBtn">✓ ปิดเรื่อง</button>
+            </div>
+          </div>
+          <div class="card" id="supportPlaceholder" style="display:flex;align-items:center;justify-content:center">
+            <div class="empty-state">
+              <div class="empty-icon">💬</div>
+              <p>เลือกเรื่องร้องเรียนเพื่อดูรายละเอียด</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================= TAB: ANALYTICS ========================= -->
+      <div id="tab-analytics" class="tab-content" style="display:none">
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">จำนวนผู้ใช้งานทั้งหมด</div></div>
+              <div class="stat-icon" style="background:#EEF2FB">👤</div>
+            </div>
+            <div class="stat-value" id="aStatUsers">—</div>
+            <div class="stat-change up" id="aStatUsersPct"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">จำนวนสินค้า</div></div>
+              <div class="stat-icon" style="background:#F0FFF4">📦</div>
+            </div>
+            <div class="stat-value" id="aStatProducts">—</div>
+            <div class="stat-change up" id="aStatProductsPct"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div><div class="stat-label">จำนวนคำสั่งซื้อ</div></div>
+              <div class="stat-icon" style="background:#FFF2F2">🛒</div>
+            </div>
+            <div class="stat-value" id="aStatOrders">—</div>
+            <div class="stat-change down" id="aStatOrdersPct"></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 380px;gap:20px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">กราฟกิจกรรมรายสัปดาห์</div>
+                <div class="card-subtitle">จำนวนคำสั่งซื้อแต่ละวัน</div>
+              </div>
+              <select class="filter-select" id="analyticsChartPeriod" style="width:auto" onchange="loadAnalyticsChart()">
+                <option value="7">7 วันล่าสุด</option>
+                <option value="30">30 วันล่าสุด</option>
+              </select>
+            </div>
+            <div class="chart-container"><canvas id="analyticsChart"></canvas></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title" style="margin-bottom:20px">หมวดหมู่ยอดนิยม</div>
+            <div id="categoryProgressList"></div>
+            <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="switchTab('products')">ดูรายงานฉบับเต็ม</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================= TAB: SETTINGS ========================= -->
+      <div id="tab-settings" class="tab-content" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <!-- Account Settings -->
+          <div>
+            <div class="card" style="margin-bottom:20px">
+              <div class="card-title" style="margin-bottom:16px">👤 ตั้งค่าบัญชี</div>
+              <div class="settings-section">
+                <div class="settings-item">
+                  <div>
+                    <div class="settings-item-label">ชื่อ</div>
+                    <div class="settings-item-value" id="settingName">—</div>
+                  </div>
+                  <button class="btn btn-secondary btn-xs" onclick="editField('name')">✏️ แก้ไข</button>
+                </div>
+                <div class="settings-item">
+                  <div>
+                    <div class="settings-item-label">อีเมล</div>
+                    <div class="settings-item-value" id="settingEmail">—</div>
+                  </div>
+                  <button class="btn btn-secondary btn-xs" onclick="editField('email')">✏️ แก้ไข</button>
+                </div>
+                <div class="settings-item">
+                  <div>
+                    <div class="settings-item-label">รหัสผ่าน</div>
+                    <div class="settings-item-value">••••••••••</div>
+                  </div>
+                  <button class="btn btn-warning btn-xs" onclick="openChangePassword()">🔒 เปลี่ยน</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title" style="margin-bottom:16px">⚙️ ตั้งค่าแอป</div>
+              <div class="settings-item">
+                <div>
+                  <div class="settings-item-label">การแจ้งเตือน</div>
+                  <div class="settings-item-value" style="font-size:12px">เปิดรับข่าวสารและสถานะคำสั่งซื้อ</div>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="notifToggle" onchange="saveNotifSetting()" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Management -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">🗂️ จัดการหมวดหมู่สินค้า</div>
+                <div class="card-subtitle">เพิ่ม/แก้ไข/ลบหมวดหมู่ในระบบ</div>
+              </div>
+              <button class="btn btn-primary-solid btn-sm" onclick="openAddCategory()">+ เพิ่มหมวดหมู่</button>
+            </div>
+            <div id="categoryList"><div class="empty-state"><div class="empty-icon">🗂️</div><p>กำลังโหลด...</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ========================= MODALS ========================= -->
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">❌ ปฏิเสธสินค้า</div>
+      <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
+    </div>
+    <p style="margin-bottom:14px;color:var(--text-light)">กรุณาระบุเหตุผลที่ปฏิเสธสินค้านี้</p>
+    <div class="form-group">
+      <textarea id="rejectReason" class="form-input" rows="4" placeholder="เช่น: สินค้าละเมิดกฎของแพลตฟอร์ม..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('rejectModal')">ยกเลิก</button>
+      <button class="btn btn-danger" onclick="confirmReject()">ยืนยันการปฏิเสธ</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">👤 ข้อมูลผู้ใช้งาน</div>
+      <button class="modal-close" onclick="closeModal('userModal')">✕</button>
+    </div>
+    <div id="userModalContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('userModal')">ปิด</button>
+      <button class="btn" id="userModalBanBtn" onclick="toggleUserBan()">—</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Field Modal -->
+<div class="modal-overlay" id="editFieldModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="editFieldTitle">แก้ไขข้อมูล</div>
+      <button class="modal-close" onclick="closeModal('editFieldModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label id="editFieldLabel">ค่าใหม่</label>
+      <input type="text" id="editFieldInput" class="form-input" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('editFieldModal')">ยกเลิก</button>
+      <button class="btn btn-primary-solid" onclick="saveEditField()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="changePasswordModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔒 เปลี่ยนรหัสผ่าน</div>
+      <button class="modal-close" onclick="closeModal('changePasswordModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่านใหม่</label>
+      <input type="password" id="newPasswordInput" class="form-input" placeholder="อย่างน้อย 6 ตัวอักษร" />
+    </div>
+    <div class="form-group">
+      <label>ยืนยันรหัสผ่านใหม่</label>
+      <input type="password" id="confirmPasswordInput" class="form-input" placeholder="พิมพ์รหัสผ่านอีกครั้ง" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('changePasswordModal')">ยกเลิก</button>
+      <button class="btn btn-primary-solid" onclick="saveNewPassword()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-overlay" id="addCategoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="categoryModalTitle">เพิ่มหมวดหมู่</div>
+      <button class="modal-close" onclick="closeModal('addCategoryModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>ชื่อหมวดหมู่</label>
+      <input type="text" id="categoryNameInput" class="form-input" placeholder="เช่น รองเท้า, อิเล็กทรอนิกส์" />
+    </div>
+    <div class="form-group">
+      <label>Emoji / ไอคอน</label>
+      <input type="text" id="categoryIconInput" class="form-input" placeholder="เช่น 👟 💻 🏠" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addCategoryModal')">ยกเลิก</button>
+      <button class="btn btn-primary-solid" onclick="saveCategory()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Firebase 9 Compat -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// =================== FIREBASE INIT ===================
+const firebaseConfig = {
+  apiKey: "AIzaSyBX_1GNx-xoiaohcnTL6TYbQeVBmm6ppRY",
+  authDomain: "yeep-marketplace.firebaseapp.com",
+  projectId: "yeep-marketplace",
+  storageBucket: "yeep-marketplace.firebasestorage.app",
+  messagingSenderId: "20249950154",
+  appId: "1:20249950154:web:8f2c108206fc170e628133"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// =================== STATE ===================
+let currentAdmin = null;
+let currentAdminData = null;
+let allUsers = [], filteredUsers = [], usersPage = 1;
+let allProducts = [], filteredProducts = [], productsPage = 1;
+let allReviewProducts = [], filteredReviewProducts = [];
+let allCategories = [];
+let allTickets = [], currentTicketId = null;
+let rejectTargetId = null;
+let editUserTarget = null;
+let editFieldType = null;
+let categoryEditId = null;
+let overviewChart = null, analyticsChartInst = null;
+const ITEMS_PER_PAGE = 10;
+
+// =================== AUTH GUARD ===================
+auth.onAuthStateChanged(async (user) => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (!snap.exists || snap.data().role !== 'admin') {
+    await auth.signOut(); window.location.href = 'index.html'; return;
+  }
+  currentAdmin = user;
+  currentAdminData = snap.data();
+  document.getElementById('adminName').textContent =
+    `${currentAdminData.firstName || ''} ${currentAdminData.lastName || ''}`.trim() || user.email;
+  document.getElementById('adminAvatar').textContent =
+    (currentAdminData.firstName || user.email)[0].toUpperCase();
+  document.getElementById('settingName').textContent =
+    `${currentAdminData.firstName || ''} ${currentAdminData.lastName || ''}`.trim();
+  document.getElementById('settingEmail').textContent = user.email;
+  document.getElementById('notifToggle').checked = currentAdminData.notificationsEnabled !== false;
+  loadAll();
+});
+
+document.getElementById('logoutBtn').onclick = () => { auth.signOut(); window.location.href = 'index.html'; };
+
+// =================== TAB NAVIGATION ===================
+const PAGE_META = {
+  overview:  { title: 'ภาพรวม', subtitle: 'สรุปสถานะและกิจกรรมของระบบในวันนี้' },
+  review:    { title: 'การตรวจสอบ', subtitle: 'ตรวจสอบและอนุมัติสินค้าจากผู้ขาย' },
+  products:  { title: 'รายการสินค้า', subtitle: 'จัดการสินค้าทั้งหมดที่อนุมัติแล้ว' },
+  users:     { title: 'จัดการผู้ใช้งาน', subtitle: 'ตรวจสอบและจัดการสิทธิ์การเข้าถึงของผู้ใช้งาน' },
+  support:   { title: 'รับเรื่องร้องเรียน', subtitle: 'ดูและตอบกลับข้อความจากผู้ใช้งาน' },
+  analytics: { title: 'การวิเคราะห์', subtitle: 'ภาพรวมสถิติและประสิทธิภาพของระบบ' },
+  settings:  { title: 'ตั้งค่า', subtitle: 'จัดการข้อมูลบัญชีและการตั้งค่าระบบของคุณ' }
+};
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).style.display = 'block';
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  const meta = PAGE_META[tab];
+  document.getElementById('pageTitle').textContent = meta.title;
+  document.getElementById('pageSubtitle').textContent = meta.subtitle;
+  if (tab === 'analytics') loadAnalyticsChart();
+}
+
+document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// =================== LOAD ALL DATA ===================
+function loadAll() {
+  listenStats();
+  listenReviewProducts();
+  listenAllProducts();
+  listenUsers();
+  listenSupport();
+  listenCategories();
+  loadOverviewChart();
+}
+
+// =================== STATS ===================
+function listenStats() {
+  db.collection('users').onSnapshot(snap => {
+    document.getElementById('statUsers').textContent = snap.size.toLocaleString('th-TH');
+    document.getElementById('aStatUsers').textContent = snap.size.toLocaleString('th-TH');
+    document.getElementById('statUsersChange').textContent = `ผู้ใช้งานทั้งหมด`;
+  });
+  db.collection('products').onSnapshot(snap => {
+    document.getElementById('aStatProducts').textContent = snap.size.toLocaleString('th-TH');
+  });
+  db.collection('orders').onSnapshot(snap => {
+    let total = 0;
+    snap.forEach(d => { total += (d.data().totalAmount || 0); });
+    document.getElementById('statRevenue').textContent = '฿' + total.toLocaleString('th-TH');
+    document.getElementById('statRevenueChange').textContent = `จากคำสั่งซื้อ ${snap.size} รายการ`;
+    document.getElementById('statOrders').textContent = snap.size.toLocaleString('th-TH');
+    document.getElementById('statOrdersChange').textContent = 'คำสั่งซื้อทั้งหมด';
+    document.getElementById('aStatOrders').textContent = snap.size.toLocaleString('th-TH');
+  });
+}
+
+// =================== OVERVIEW CHART ===================
+async function loadOverviewChart() {
+  const days = parseInt(document.getElementById('chartPeriod')?.value || 30);
+  const labels = [], data = [];
+  const now = new Date();
+  const counts = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const key = d.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+    labels.push(key); counts[key] = 0;
+  }
+  const since = new Date(now); since.setDate(since.getDate() - days);
+  const snap = await db.collection('orders').where('createdAt', '>=', since).get();
+  snap.forEach(d => {
+    const ts = d.data().createdAt?.toDate?.();
+    if (ts) {
+      const key = ts.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
+      if (counts[key] !== undefined) counts[key]++;
+    }
+  });
+  Object.keys(counts).forEach(k => data.push(counts[k]));
+  const ctx = document.getElementById('overviewChart').getContext('2d');
+  if (overviewChart) overviewChart.destroy();
+  overviewChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'คำสั่งซื้อ', data, borderColor: '#5B7FC4', backgroundColor: 'rgba(91,127,196,0.1)', fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#5B7FC4' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+  });
+}
+document.getElementById('chartPeriod')?.addEventListener('change', loadOverviewChart);
+
+// =================== REVIEW ===================
+function listenReviewProducts() {
+  db.collection('products').where('status', '==', 'รอตรวจสอบ').onSnapshot(snap => {
+    allReviewProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    filteredReviewProducts = [...allReviewProducts];
+    const count = allReviewProducts.length;
+    const badge = document.getElementById('reviewBadge');
+    badge.textContent = count; badge.style.display = count > 0 ? 'inline' : 'none';
+    document.getElementById('statPending').textContent = count;
+    document.getElementById('statPendingChange').textContent = count > 0 ? '⚠️ ต้องการการดำเนินการ' : '✅ ไม่มีรายการรอ';
+    renderQuickReview(); renderReviewGrid();
+  });
+}
+
+function renderQuickReview() {
+  const el = document.getElementById('quickReviewList');
+  if (allReviewProducts.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-icon">✅</div><p>ไม่มีสินค้ารอตรวจสอบ</p></div>'; return;
+  }
+  el.innerHTML = allReviewProducts.slice(0, 3).map(p => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <img src="${p.images?.[0] || ''}" onerror="this.src='https://via.placeholder.com/48'" style="width:48px;height:48px;object-fit:cover;border-radius:8px" />
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600">${p.name}</div>
+        <div style="font-size:12px;color:var(--warning)">฿${(p.price||0).toLocaleString('th-TH')}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-xs btn-danger" onclick="openReject('${p.id}')">🗑️</button>
+        <button class="btn btn-xs btn-success" onclick="approveProduct('${p.id}')">✓</button>
+      </div>
+    </div>`).join('');
+}
+
+function renderReviewGrid() {
+  const sel = document.getElementById('reviewSearch')?.value.toLowerCase() || '';
+  const filtered = allReviewProducts.filter(p => !sel || p.name?.toLowerCase().includes(sel));
+  const el = document.getElementById('reviewGrid');
+  if (filtered.length === 0) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">✅</div><p>ไม่มีสินค้ารอตรวจสอบ</p></div>'; return; }
+  el.innerHTML = filtered.map(p => `
+    <div class="product-card-admin">
+      <div class="product-card-img-wrap">
+        <img class="product-card-img" src="${p.images?.[0] || ''}" onerror="this.src='https://via.placeholder.com/300x180'" />
+        <span class="badge badge-warning status-badge-img">⏳ รอตรวจสอบ</span>
+      </div>
+      <div class="product-card-body">
+        <div class="product-card-name">${p.name}</div>
+        <div class="product-card-price">฿${(p.price||0).toLocaleString('th-TH')}</div>
+        <div class="product-card-seller">👤 ${p.sellerId?.slice(0,8) || '—'}</div>
+        <div class="product-card-actions">
+          <button class="btn btn-success" onclick="approveProduct('${p.id}')">✅ อนุมัติ</button>
+          <button class="btn btn-danger" onclick="openReject('${p.id}')">❌ ปฏิเสธ</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterReview() { renderReviewGrid(); }
+
+async function approveProduct(id) {
+  await db.collection('products').doc(id).update({ status: 'พร้อมขาย' });
+  showToast('✅ อนุมัติสินค้าแล้ว', 'success');
+}
+
+function openReject(id) { rejectTargetId = id; document.getElementById('rejectReason').value = ''; openModal('rejectModal'); }
+async function confirmReject() {
+  if (!rejectTargetId) return;
+  const reason = document.getElementById('rejectReason').value.trim();
+  const product = allReviewProducts.find(p => p.id === rejectTargetId);
+  const sellerId = product?.sellerId;
+
+  await db.collection('products').doc(rejectTargetId).update({ status: 'ถูกปฏิเสธ', rejectReason: reason });
+
+  if (sellerId) {
+    const adminName = `${currentAdminData?.firstName || ''} ${currentAdminData?.lastName || ''}`.trim() || 'แอดมิน';
+    const msgText = `สินค้า "${product?.name || 'ของคุณ'}" ไม่ผ่านการตรวจสอบให้ลงขาย\n\nเหตุผล: ${reason}\n\nหากมีข้อสงสัยสามารถพิมพ์สอบถามได้ที่นี่เลยครับ`;
+    
+    // Create new support ticket from Admin
+    const ticketRef = await db.collection('support_tickets').add({
+      userId: sellerId,
+      userName: sellerId, 
+      subject: `แจ้งเตือน: สินค้าไม่อนุมัติ`,
+      status: 'open',
+      lastMessage: msgText,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    
+    await ticketRef.collection('messages').add({
+      text: msgText,
+      senderRole: 'admin',
+      senderName: adminName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  closeModal('rejectModal'); rejectTargetId = null;
+  showToast('❌ ปฏิเสธสินค้าแล้ว พร้อมแจ้งเตือนผู้ขาย', 'error');
+}
+
+// =================== ALL PRODUCTS ===================
+function listenAllProducts() {
+  db.collection('products').where('status', '==', 'พร้อมขาย').onSnapshot(snap => {
+    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const catSet = new Set(allProducts.map(p => p.category).filter(Boolean));
+    const sel = document.getElementById('productsCatFilter');
+    sel.innerHTML = '<option value="">ทุกหมวดหมู่สินค้า</option>' + [...catSet].map(c => `<option value="${c}">${c}</option>`).join('');
+    filterProducts();
+  });
+}
+
+function filterProducts() {
+  const q = document.getElementById('productsSearch')?.value.toLowerCase() || '';
+  const cat = document.getElementById('productsCatFilter')?.value || '';
+  const sort = document.getElementById('productsSort')?.value || 'newest';
+  filteredProducts = allProducts.filter(p =>
+    (!q || p.name?.toLowerCase().includes(q)) && (!cat || p.category === cat)
+  );
+  if (sort === 'newest') filteredProducts.sort((a, b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  else if (sort === 'oldest') filteredProducts.sort((a, b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
+  else if (sort === 'price-asc') filteredProducts.sort((a, b) => a.price - b.price);
+  else filteredProducts.sort((a, b) => b.price - a.price);
+  document.getElementById('productsTotalLabel').textContent = `รวมทั้งหมด ${filteredProducts.length} รายการ`;
+  productsPage = 1; renderProducts();
+}
+
+function renderProducts() {
+  const start = (productsPage - 1) * ITEMS_PER_PAGE, end = start + ITEMS_PER_PAGE;
+  const page = filteredProducts.slice(start, end);
+  const el = document.getElementById('productsGrid');
+  if (page.length === 0) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📦</div><p>ไม่พบสินค้า</p></div>'; }
+  else el.innerHTML = page.map(p => {
+    const status = p.stock <= 0 ? `<span class="badge badge-gray">ขายแล้ว</span>` : `<span class="badge badge-success">พร้อมขาย</span>`;
+    return `
+      <div class="product-card-admin">
+        <div class="product-card-img-wrap">
+          <img class="product-card-img" src="${p.images?.[0] || ''}" onerror="this.src='https://via.placeholder.com/300x180'" />
+          <span style="position:absolute;top:10px;left:10px">${status}</span>
+          <button class="btn btn-xs btn-danger" onclick="deleteProduct('${p.id}')" style="position:absolute;top:10px;right:10px">🗑️</button>
+        </div>
+        <div class="product-card-body">
+          <div class="product-card-name">${p.name}</div>
+          <div class="product-card-price">฿${(p.price||0).toLocaleString('th-TH')}</div>
+          <div class="product-card-seller">👤 ${p.sellerId?.slice(0,8) || '—'}</div>
+          <div style="font-size:12px;color:var(--text-light)">อัปเดต: ${p.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</div>
+        </div>
+      </div>`;
+  }).join('');
+  renderPagination('productsPagination', Math.ceil(filteredProducts.length / ITEMS_PER_PAGE), productsPage, (p) => { productsPage = p; renderProducts(); }, filteredProducts.length, start, end);
+}
+
+async function deleteProduct(id) {
+  if (!confirm('ต้องการลบสินค้านี้ออกจากระบบ?')) return;
+  await db.collection('products').doc(id).delete();
+  showToast('🗑️ ลบสินค้าแล้ว', 'success');
+}
+
+// =================== USERS ===================
+function listenUsers() {
+  db.collection('users').onSnapshot(snap => {
+    allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    filterUsers();
+  });
+}
+
+let activeRoleFilter = '';
+document.getElementById('userRoleFilter').querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#userRoleFilter .filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeRoleFilter = chip.dataset.role;
+    filterUsers();
+  });
+});
+
+function filterUsers() {
+  const q = document.getElementById('usersSearch')?.value.toLowerCase() || '';
+  filteredUsers = allUsers.filter(u =>
+    (!q || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)) &&
+    (!activeRoleFilter || u.role === activeRoleFilter)
+  );
+  usersPage = 1; renderUsers();
+}
+
+function renderUsers() {
+  const start = (usersPage - 1) * ITEMS_PER_PAGE, end = start + ITEMS_PER_PAGE;
+  const page = filteredUsers.slice(start, end);
+  const tbody = document.getElementById('usersTableBody');
+  if (page.length === 0) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-light)">ไม่พบผู้ใช้งาน</td></tr>`; return; }
+  tbody.innerHTML = page.map(u => {
+    const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+    const initials = (u.firstName || u.email || 'U')[0].toUpperCase();
+    const status = u.status === 'banned'
+      ? `<span class="badge badge-danger">ถูกระงับ</span>`
+      : `<span class="badge badge-success">ใช้งานอยู่</span>`;
+    const role = u.role === 'seller' ? '<span class="badge badge-blue">ผู้ขาย</span>'
+      : u.role === 'admin' ? '<span class="badge badge-warning">แอดมิน</span>'
+      : '<span class="badge badge-gray">ผู้ซื้อ</span>';
+    const joinDate = u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—';
+    return `
+      <tr>
+        <td><div class="user-cell">
+          <div class="user-avatar-sm">${u.profileImage ? `<img src="${u.profileImage}" />` : initials}</div>
+          <div><div class="user-name">${name}</div><div class="user-email">${u.email || '—'}</div></div>
+        </div></td>
+        <td>${role}</td>
+        <td>${status}</td>
+        <td>${joinDate}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-xs btn-secondary" onclick="viewUser('${u.id}')">👁️ ดู</button>
+            <button class="btn btn-xs ${u.status==='banned'?'btn-success':'btn-danger'}" onclick="quickBanUser('${u.id}','${u.status}')">
+              ${u.status === 'banned' ? '🔓 ปลดแบน' : '🚫 แบน'}
+            </button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  renderPagination('usersPagination', Math.ceil(filteredUsers.length / ITEMS_PER_PAGE), usersPage, (p) => { usersPage = p; renderUsers(); }, filteredUsers.length, start, end);
+}
+
+function viewUser(id) {
+  editUserTarget = allUsers.find(u => u.id === id);
+  if (!editUserTarget) return;
+  const u = editUserTarget;
+  const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'ไม่ระบุชื่อ';
+  document.getElementById('userModalContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div class="user-avatar-sm" style="width:56px;height:56px;font-size:22px">${u.profileImage ? `<img src="${u.profileImage}" />` : name[0]?.toUpperCase()}</div>
+      <div><div style="font-size:18px;font-weight:700">${name}</div><div style="color:var(--text-light)">${u.email || '—'}</div></div>
+    </div>
+    <div style="display:grid;gap:8px">
+      <div class="settings-item"><span class="settings-item-label">บทบาท</span><span>${u.role || '—'}</span></div>
+      <div class="settings-item"><span class="settings-item-label">สถานะ</span><span>${u.status === 'banned' ? '🚫 ถูกระงับ' : '✅ ใช้งานอยู่'}</span></div>
+      <div class="settings-item"><span class="settings-item-label">วันที่สมัคร</span><span>${u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</span></div>
+    </div>`;
+  const banBtn = document.getElementById('userModalBanBtn');
+  banBtn.textContent = u.status === 'banned' ? '🔓 ปลดแบน' : '🚫 แบนผู้ใช้นี้';
+  banBtn.className = `btn ${u.status === 'banned' ? 'btn-success' : 'btn-danger'}`;
+  openModal('userModal');
+}
+
+async function toggleUserBan() {
+  if (!editUserTarget) return;
+  const newStatus = editUserTarget.status === 'banned' ? 'active' : 'banned';
+  await db.collection('users').doc(editUserTarget.id).update({ status: newStatus });
+  closeModal('userModal');
+  showToast(newStatus === 'banned' ? '🚫 แบนผู้ใช้งานแล้ว' : '🔓 ปลดแบนผู้ใช้งานแล้ว', newStatus === 'banned' ? 'error' : 'success');
+}
+
+async function quickBanUser(id, currentStatus) {
+  const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
+  await db.collection('users').doc(id).update({ status: newStatus });
+  showToast(newStatus === 'banned' ? '🚫 แบนแล้ว' : '🔓 ปลดแบนแล้ว', 'success');
+}
+
+// =================== SUPPORT / TICKETS ===================
+function listenSupport() {
+  db.collection('support_tickets').orderBy('createdAt', 'desc').onSnapshot(snap => {
+    allTickets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const unread = allTickets.filter(t => t.status === 'open').length;
+    const badge = document.getElementById('supportBadge');
+    badge.textContent = unread; badge.style.display = unread > 0 ? 'inline' : 'none';
+    document.getElementById('notifDot').style.display = unread > 0 ? 'block' : 'none';
+    renderTicketList();
+  });
+}
+
+function renderTicketList() {
+  const el = document.getElementById('ticketList');
+  if (allTickets.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">✉️</div><p>ยังไม่มีเรื่องร้องเรียน</p></div>'; return;
+  }
+  el.innerHTML = allTickets.map(t => `
+    <div class="ticket-item ${t.status==='open'?'unread':''}" onclick="openTicket('${t.id}')">
+      <div style="font-size:24px">${t.status==='open'?'🔴':'✅'}</div>
+      <div class="ticket-meta">
+        <div class="ticket-subject">${t.subject || 'ไม่ระบุหัวข้อ'}</div>
+        <div class="ticket-preview">${t.lastMessage || '—'}</div>
+      </div>
+      <div class="ticket-time">${t.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</div>
+    </div>`).join('');
+}
+
+function openTicket(id) {
+  currentTicketId = id;
+  const ticket = allTickets.find(t => t.id === id);
+  if (!ticket) return;
+  document.getElementById('chatTicketSubject').textContent = ticket.subject || 'ไม่ระบุหัวข้อ';
+  document.getElementById('chatTicketUser').textContent = ticket.userName || ticket.userEmail || '—';
+  document.getElementById('chatTicketStatus').textContent = ticket.status === 'open' ? '🔴 เปิดอยู่' : '✅ ปิดแล้ว';
+  document.getElementById('chatTicketStatus').className = `badge ${ticket.status === 'open' ? 'badge-danger' : 'badge-success'}`;
+  document.getElementById('supportPlaceholder').style.display = 'none';
+  const chatPanel = document.getElementById('supportChatPanel');
+  chatPanel.style.display = 'flex'; chatPanel.style.flexDirection = 'column';
+  loadTicketMessages(id);
+}
+
+function loadTicketMessages(id) {
+  db.collection('support_tickets').doc(id).collection('messages').orderBy('createdAt').onSnapshot(snap => {
+    const el = document.getElementById('chatMessages');
+    el.innerHTML = snap.docs.map(d => {
+      const msg = d.data();
+      const isAdmin = msg.senderRole === 'admin';
+      const time = msg.createdAt?.toDate?.()?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) || '';
+      let bubbleContent = '';
+      if (msg.image) bubbleContent += `<img src="${msg.image}" style="max-width:200px;border-radius:6px;margin-bottom:6px;display:block"/>`;
+      if (msg.text) bubbleContent += `<span>${msg.text.replace(/\n/g, '<br/>')}</span>`;
+      
+      return `
+        <div style="display:flex;flex-direction:column;${isAdmin ? 'align-items:flex-end' : 'align-items:flex-start'}">
+          <div class="chat-bubble ${isAdmin ? 'admin' : 'user'}">${bubbleContent}</div>
+          <div class="bubble-time">${isAdmin ? 'แอดมิน' : (msg.senderName || 'ผู้ใช้')} · ${time}</div>
+        </div>`;
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  });
+}
+
+let pendingSupportImage = null;
+function previewSupportImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    pendingSupportImage = e.target.result;
+    document.getElementById('chatReplyInput').placeholder = 'แนบรูปภาพแล้ว (พิมพ์อธิบายเพิ่มได้)...';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function sendSupportReply() {
+  const input = document.getElementById('chatReplyInput');
+  const text = input.value.trim();
+  if ((!text && !pendingSupportImage) || !currentTicketId) return;
+  
+  input.value = '';
+  input.placeholder = 'พิมพ์ข้อความ...';
+  
+  const adminName = `${currentAdminData?.firstName || ''} ${currentAdminData?.lastName || ''}`.trim() || 'แอดมิน';
+  const imgData = pendingSupportImage;
+  pendingSupportImage = null;
+  document.getElementById('chatImageInput').value = '';
+
+  const msgPayload = {
+    senderRole: 'admin', 
+    senderName: adminName, 
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (text) msgPayload.text = text;
+  if (imgData) msgPayload.image = imgData;
+
+  await db.collection('support_tickets').doc(currentTicketId).collection('messages').add(msgPayload);
+  await db.collection('support_tickets').doc(currentTicketId).update({
+    lastMessage: text || 'ส่งรูปภาพ 🖼️', 
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function closeTicket() {
+  if (!currentTicketId) return;
+  await db.collection('support_tickets').doc(currentTicketId).update({ status: 'resolved' });
+  showToast('✅ ปิดเรื่องร้องเรียนแล้ว', 'success');
+}
+
+// =================== ANALYTICS ===================
+async function loadAnalyticsChart() {
+  const days = parseInt(document.getElementById('analyticsChartPeriod')?.value || 7);
+  const labels = ['จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.', 'อา.'];
+  const dayNames = days <= 7 ? labels : [];
+  const data = new Array(days).fill(0);
+  const now = new Date();
+  const since = new Date(now); since.setDate(since.getDate() - days);
+  const snap = await db.collection('orders').where('createdAt', '>=', since).get();
+  snap.forEach(d => {
+    const ts = d.data().createdAt?.toDate?.();
+    if (ts) { const idx = Math.floor((now - ts) / 86400000); if (idx < days) data[days - 1 - idx]++; }
+  });
+  const dayLabels = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    dayLabels.push(d.toLocaleDateString('th-TH', { weekday: 'short' }));
+  }
+  const ctx = document.getElementById('analyticsChart').getContext('2d');
+  if (analyticsChartInst) analyticsChartInst.destroy();
+  analyticsChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: dayLabels, datasets: [{ label: 'คำสั่งซื้อ', data, backgroundColor: data.map((_, i) => i === data.length - 1 ? '#5B7FC4' : '#D6E0F5'), borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+  });
+  // Popular categories
+  const catSnap = await db.collection('products').where('status', '==', 'พร้อมขาย').get();
+  const catCount = {};
+  catSnap.forEach(d => { const c = d.data().category || 'อื่นๆ'; catCount[c] = (catCount[c] || 0) + 1; });
+  const sorted = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const total = sorted.reduce((s, [, n]) => s + n, 0);
+  const icons = { 'รองเท้า': '👟', 'อิเล็กทรอนิกส์': '💻', 'เสื้อผ้า': '👗', 'อาหาร': '🍜', 'ของแต่งบ้าน': '🏠' };
+  document.getElementById('categoryProgressList').innerHTML = sorted.map(([cat, cnt]) => {
+    const pct = total ? Math.round(cnt / total * 100) : 0;
+    return `<div class="progress-item">
+      <div class="progress-icon">${icons[cat] || '📦'}</div>
+      <div class="progress-info">
+        <div class="progress-label">${cat}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="progress-pct">${pct}%</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--text-light);text-align:center;padding:16px">ยังไม่มีข้อมูล</div>';
+  // Analytics stat changes (mock % for now)
+  document.getElementById('aStatUsersPct').textContent = '+12.5% จากเดือนที่แล้ว';
+  document.getElementById('aStatProductsPct').textContent = '+4.2% จากเดือนที่แล้ว';
+  document.getElementById('aStatOrdersPct').textContent = '-2.1% จากเดือนที่แล้ว';
+}
+
+// =================== CATEGORIES ===================
+function listenCategories() {
+  db.collection('categories').onSnapshot(snap => {
+    allCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCategories();
+  });
+}
+
+function renderCategories() {
+  const el = document.getElementById('categoryList');
+  if (allCategories.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂️</div><p>ยังไม่มีหมวดหมู่</p></div>'; return;
+  }
+  el.innerHTML = allCategories.map(c => {
+    const count = allProducts.filter(p => p.category === c.name).length;
+    return `<div class="category-item">
+      <div style="width:48px;height:48px;background:var(--primary-light);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">${c.icon || '📦'}</div>
+      <div><div class="category-name">${c.name}</div><div class="category-count">${count} รายการ</div></div>
+      <div class="category-actions">
+        <button class="btn btn-xs btn-secondary" onclick="openEditCategory('${c.id}')">✏️</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteCategoryItem('${c.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddCategory() { categoryEditId = null; document.getElementById('categoryModalTitle').textContent = 'เพิ่มหมวดหมู่'; document.getElementById('categoryNameInput').value = ''; document.getElementById('categoryIconInput').value = ''; openModal('addCategoryModal'); }
+function openEditCategory(id) {
+  categoryEditId = id;
+  const cat = allCategories.find(c => c.id === id);
+  document.getElementById('categoryModalTitle').textContent = 'แก้ไขหมวดหมู่';
+  document.getElementById('categoryNameInput').value = cat?.name || '';
+  document.getElementById('categoryIconInput').value = cat?.icon || '';
+  openModal('addCategoryModal');
+}
+async function saveCategory() {
+  const name = document.getElementById('categoryNameInput').value.trim();
+  const icon = document.getElementById('categoryIconInput').value.trim();
+  if (!name) return;
+  if (categoryEditId) await db.collection('categories').doc(categoryEditId).update({ name, icon });
+  else await db.collection('categories').add({ name, icon, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+  closeModal('addCategoryModal'); showToast('✅ บันทึกหมวดหมู่แล้ว', 'success');
+}
+async function deleteCategoryItem(id) {
+  if (!confirm('ต้องการลบหมวดหมู่นี้?')) return;
+  await db.collection('categories').doc(id).delete();
+  showToast('🗑️ ลบหมวดหมู่แล้ว', 'success');
+}
+
+// =================== SETTINGS ===================
+function editField(type) {
+  editFieldType = type;
+  if (type === 'name') {
+    document.getElementById('editFieldTitle').textContent = 'แก้ไขชื่อ';
+    document.getElementById('editFieldLabel').textContent = 'ชื่อ-นามสกุล';
+    document.getElementById('editFieldInput').value = document.getElementById('settingName').textContent;
+  } else {
+    document.getElementById('editFieldTitle').textContent = 'แก้ไขอีเมล';
+    document.getElementById('editFieldLabel').textContent = 'อีเมล';
+    document.getElementById('editFieldInput').value = document.getElementById('settingEmail').textContent;
+  }
+  openModal('editFieldModal');
+}
+
+async function saveEditField() {
+  const val = document.getElementById('editFieldInput').value.trim();
+  if (!val || !currentAdmin) return;
+  if (editFieldType === 'name') {
+    const parts = val.split(' ');
+    await db.collection('users').doc(currentAdmin.uid).update({ firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '' });
+    document.getElementById('settingName').textContent = val;
+    document.getElementById('adminName').textContent = val;
+  } else {
+    // Email update needs re-authentication in production
+    showToast('⚠️ การเปลี่ยนอีเมลต้องทำผ่าน Firebase Console', 'error');
+  }
+  closeModal('editFieldModal'); showToast('✅ บันทึกแล้ว', 'success');
+}
+
+function openChangePassword() { document.getElementById('newPasswordInput').value = ''; document.getElementById('confirmPasswordInput').value = ''; openModal('changePasswordModal'); }
+async function saveNewPassword() {
+  const pw = document.getElementById('newPasswordInput').value;
+  const confirm = document.getElementById('confirmPasswordInput').value;
+  if (pw.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error'); return; }
+  if (pw !== confirm) { showToast('❌ รหัสผ่านไม่ตรงกัน', 'error'); return; }
+  try { await currentAdmin.updatePassword(pw); closeModal('changePasswordModal'); showToast('✅ เปลี่ยนรหัสผ่านแล้ว', 'success'); }
+  catch { showToast('❌ กรุณา Login ใหม่ก่อนเปลี่ยนรหัสผ่าน', 'error'); }
+}
+
+async function saveNotifSetting() {
+  const val = document.getElementById('notifToggle').checked;
+  if (!currentAdmin) return;
+  await db.collection('users').doc(currentAdmin.uid).update({ notificationsEnabled: val });
+}
+
+// =================== PAGINATION HELPER ===================
+function renderPagination(containerId, totalPages, currentPage, onPage, totalItems, start, end) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const shown = Math.min(end, totalItems);
+  el.innerHTML = `
+    <div class="pagination-info">แสดง ${start + 1}–${shown} จาก ${totalItems} รายการ</div>
+    <div class="pagination-btns">
+      <button class="page-btn" onclick="(${onPage.toString()})(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>‹</button>
+      ${Array.from({length: Math.min(totalPages, 5)}, (_, i) => {
+        const p = i + 1;
+        return `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="(${onPage.toString()})(${p})">${p}</button>`;
+      }).join('')}
+      ${totalPages > 5 ? `<span style="padding:0 4px">...</span><button class="page-btn ${currentPage===totalPages?'active':''}" onclick="(${onPage.toString()})(${totalPages})">${totalPages}</button>` : ''}
+      <button class="page-btn" onclick="(${onPage.toString()})(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>›</button>
+    </div>`;
+}
+
+// =================== MODAL HELPERS ===================
+function openModal(id) { document.getElementById(id).classList.add('visible'); }
+function closeModal(id) { document.getElementById(id).classList.remove('visible'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', (e) => { if (e.target === m) m.classList.remove('visible'); });
+});
+
+// =================== TOAST ===================
+function showToast(msg, type = 'default') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+</script>
+</body>
+</html>
