@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
 import { auth, db } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
 import { useRouter } from 'expo-router';
 
@@ -56,6 +56,16 @@ export default function HomeScreen() {
       setLoading(false);
     });
 
+    // 3. อัปเดต lastSeen บ่อยๆ ทุกๆ 1 นาทีที่ใช้งานแอพ
+    let lastSeenInterval = null;
+    if (auth.currentUser) {
+      const updateLastSeen = () => {
+        updateDoc(doc(db, 'users', auth.currentUser.uid), { lastSeen: serverTimestamp() }).catch(() => {});
+      };
+      updateLastSeen(); // update immediately
+      lastSeenInterval = setInterval(updateLastSeen, 60000); // and every minute
+    }
+
     // 2. ตรวจสอบแจ้งเตือนแชทใหม่
     let chatUnsubscribe = () => {};
     if (auth.currentUser) {
@@ -77,6 +87,7 @@ export default function HomeScreen() {
     return () => {
       unsubscribe();
       chatUnsubscribe();
+      if (lastSeenInterval) clearInterval(lastSeenInterval);
     };
   }, [auth.currentUser?.uid]);
 

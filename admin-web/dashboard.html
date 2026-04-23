@@ -190,6 +190,7 @@
         <div class="card" style="margin-bottom:20px">
           <div class="card-header" style="margin-bottom:16px">
             <div class="card-title">จัดการผู้ใช้งานทั้งหมด</div>
+            <button class="btn btn-primary-solid btn-sm" onclick="openModal('addAdminModal')">+ เพิ่มแอดมิน</button>
           </div>
           <div class="filter-row">
             <div class="search-bar" style="flex:1;max-width:400px">
@@ -198,8 +199,7 @@
             </div>
             <div class="filter-row" id="userRoleFilter">
               <button class="filter-chip active" data-role="">ทั้งหมด</button>
-              <button class="filter-chip" data-role="buyer">ผู้ซื้อ</button>
-              <button class="filter-chip" data-role="seller">ผู้ขาย</button>
+              <button class="filter-chip" data-role="user">ผู้ใช้</button>
               <button class="filter-chip" data-role="admin">แอดมิน</button>
             </div>
           </div>
@@ -211,7 +211,7 @@
               <tr>
                 <th>ผู้ใช้งาน</th>
                 <th>บทบาท</th>
-                <th>สถานะ</th>
+                <th>ออนไลน์</th>
                 <th>วันที่เข้าร่วม</th>
                 <th>การจัดการ</th>
               </tr>
@@ -416,6 +416,36 @@
   </div>
 </div>
 
+<!-- Add Admin Modal -->
+<div class="modal-overlay" id="addAdminModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">➕ เพิ่มบัญชีแอดมินใหม่</div>
+      <button class="modal-close" onclick="closeModal('addAdminModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>ชื่อ</label>
+      <input type="text" id="adminFirstName" class="form-input" placeholder="ชื่อจริง" />
+    </div>
+    <div class="form-group">
+      <label>นามสกุล</label>
+      <input type="text" id="adminLastName" class="form-input" placeholder="นามสกุลจริง" />
+    </div>
+    <div class="form-group">
+      <label>อีเมล</label>
+      <input type="email" id="adminEmail" class="form-input" placeholder="admin@yeep.com" />
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน (6 ตัวอักษรขึ้นไป)</label>
+      <input type="password" id="adminPassword" class="form-input" placeholder="รหัสผ่านเริ่มต้น" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('addAdminModal')">ยกเลิก</button>
+      <button class="btn btn-primary-solid" onclick="createAdminAccount()">➕ สร้างบัญชี</button>
+    </div>
+  </div>
+</div>
+
 <!-- User Detail Modal -->
 <div class="modal-overlay" id="userModal">
   <div class="modal">
@@ -426,6 +456,7 @@
     <div id="userModalContent"></div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('userModal')">ปิด</button>
+      <button class="btn btn-danger" id="userModalDeleteBtn" onclick="deleteUserAccount()">🗑️ ลบ Account</button>
       <button class="btn" id="userModalBanBtn" onclick="toggleUserBan()">—</button>
     </div>
   </div>
@@ -955,10 +986,33 @@ function filterUsers() {
   const q = document.getElementById('usersSearch')?.value.toLowerCase() || '';
   filteredUsers = allUsers.filter(u =>
     (!q || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)) &&
-    (!activeRoleFilter || u.role === activeRoleFilter)
+    (!activeRoleFilter || (activeRoleFilter === 'user' ? u.role !== 'admin' : u.role === 'admin'))
   );
   usersPage = 1; renderUsers();
 }
+
+function getUserOnlineStatus(u) {
+  if (!u.lastSeen) return { dot: '⚫', text: 'ไม่ทราบ', color: '#94A3B8' };
+  try {
+    const lastSeenDate = u.lastSeen.toDate ? u.lastSeen.toDate() : new Date(u.lastSeen);
+    const diffMs = Date.now() - lastSeenDate.getTime();
+    if (isNaN(diffMs)) throw new Error('Invalid Date');
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 5) return { dot: '🟢', text: 'ออนไลน์', color: '#22C55E' };
+    if (diffMins < 60) return { dot: '🟡', text: `${diffMins} นาทีที่แล้ว`, color: '#F59E0B' };
+    if (diffMins < 1440) return { dot: '⚫', text: `${Math.floor(diffMins / 60)} ชั่วโมงที่แล้ว`, color: '#94A3B8' };
+    return { dot: '⚫', text: lastSeenDate.toLocaleDateString('th-TH'), color: '#94A3B8' };
+  } catch (e) {
+    return { dot: '⚫', text: 'ไม่ทราบ', color: '#94A3B8' };
+  }
+}
+
+// Update realtime view every minute
+setInterval(() => {
+  if (document.getElementById('tab-users')?.style.display !== 'none' && filteredUsers.length > 0) {
+    renderUsers();
+  }
+}, 60000);
 
 function renderUsers() {
   const start = (usersPage - 1) * ITEMS_PER_PAGE, end = start + ITEMS_PER_PAGE;
@@ -968,13 +1022,15 @@ function renderUsers() {
   tbody.innerHTML = page.map(u => {
     const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
     const initials = (u.firstName || u.email || 'U')[0].toUpperCase();
-    const status = u.status === 'banned'
-      ? `<span class="badge badge-danger">ถูกระงับ</span>`
-      : `<span class="badge badge-success">ใช้งานอยู่</span>`;
-    const role = u.role === 'seller' ? '<span class="badge badge-blue">ผู้ขาย</span>'
-      : u.role === 'admin' ? '<span class="badge badge-warning">แอดมิน</span>'
-      : '<span class="badge badge-gray">ผู้ซื้อ</span>';
+    const isBanned = u.status === 'banned';
+    const status = isBanned
+      ? `<span class="badge badge-danger">🚫 ถูกระงับ</span>`
+      : `<span class="badge badge-success">✅ ใช้งานอยู่</span>`;
+    const role = u.role === 'admin'
+      ? '<span class="badge badge-warning">⭐ แอดมิน</span>'
+      : '<span class="badge badge-blue">👤 ผู้ใช้</span>';
     const joinDate = u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—';
+    const online = getUserOnlineStatus(u);
     return `
       <tr>
         <td><div class="user-cell">
@@ -982,14 +1038,15 @@ function renderUsers() {
           <div><div class="user-name">${name}</div><div class="user-email">${u.email || '—'}</div></div>
         </div></td>
         <td>${role}</td>
-        <td>${status}</td>
+        <td><span style="font-size:16px">${online.dot}</span> <span style="color:${online.color};font-size:13px">${online.text}</span></td>
         <td>${joinDate}</td>
         <td>
           <div style="display:flex;gap:6px">
             <button class="btn btn-xs btn-secondary" onclick="viewUser('${u.id}')">👁️ ดู</button>
-            <button class="btn btn-xs ${u.status==='banned'?'btn-success':'btn-danger'}" onclick="quickBanUser('${u.id}','${u.status}')">
-              ${u.status === 'banned' ? '🔓 ปลดแบน' : '🚫 แบน'}
+            <button class="btn btn-xs ${isBanned ? 'btn-success' : 'btn-warning'}" onclick="quickBanUser('${u.id}','${u.status}')">
+              ${isBanned ? '🔓 ปลดแบน' : '🚫 แบน'}
             </button>
+            <button class="btn btn-xs btn-danger" onclick="confirmDeleteUser('${u.id}','${name.replace(/'/g, '')}')">🗑️</button>
           </div>
         </td>
       </tr>`;
@@ -998,24 +1055,41 @@ function renderUsers() {
 }
 
 function viewUser(id) {
-  editUserTarget = allUsers.find(u => u.id === id);
-  if (!editUserTarget) return;
-  const u = editUserTarget;
-  const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'ไม่ระบุชื่อ';
-  document.getElementById('userModalContent').innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
-      <div class="user-avatar-sm" style="width:56px;height:56px;font-size:22px">${u.profileImage ? `<img src="${u.profileImage}" />` : name[0]?.toUpperCase()}</div>
-      <div><div style="font-size:18px;font-weight:700">${name}</div><div style="color:var(--text-light)">${u.email || '—'}</div></div>
-    </div>
-    <div style="display:grid;gap:8px">
-      <div class="settings-item"><span class="settings-item-label">บทบาท</span><span>${u.role || '—'}</span></div>
-      <div class="settings-item"><span class="settings-item-label">สถานะ</span><span>${u.status === 'banned' ? '🚫 ถูกระงับ' : '✅ ใช้งานอยู่'}</span></div>
-      <div class="settings-item"><span class="settings-item-label">วันที่สมัคร</span><span>${u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</span></div>
-    </div>`;
-  const banBtn = document.getElementById('userModalBanBtn');
-  banBtn.textContent = u.status === 'banned' ? '🔓 ปลดแบน' : '🚫 แบนผู้ใช้นี้';
-  banBtn.className = `btn ${u.status === 'banned' ? 'btn-success' : 'btn-danger'}`;
-  openModal('userModal');
+  try {
+    editUserTarget = allUsers.find(u => u.id === id);
+    if (!editUserTarget) return;
+    const u = editUserTarget;
+    const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'ไม่ระบุชื่อ';
+    const online = getUserOnlineStatus(u);
+    document.getElementById('userModalContent').innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div class="user-avatar-sm" style="width:56px;height:56px;font-size:22px">${u.profileImage ? `<img src="${u.profileImage}" />` : name[0]?.toUpperCase()}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700">${name}</div>
+          <div style="color:var(--text-light)">${u.email || '—'}</div>
+          <div style="margin-top:4px"><span>${online.dot}</span> <span style="color:${online.color};font-size:13px;font-weight:500">${online.text}</span></div>
+        </div>
+      </div>
+      <div style="display:grid;gap:8px">
+        <div class="settings-item"><span class="settings-item-label">บทบาท</span><span>${u.role === 'admin' ? '⭐ แอดมิน' : '👤 ผู้ใช้'}</span></div>
+        <div class="settings-item"><span class="settings-item-label">สถานะ</span><span>${u.status === 'banned' ? '🚫 ถูกระงับ' : '✅ ใช้งานอยู่'}</span></div>
+        <div class="settings-item"><span class="settings-item-label">วันที่สมัคร</span><span>${u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</span></div>
+      </div>
+      ${u.status === 'banned' ? `
+      <div style="margin-top:16px;padding:12px;background:#FFF1F0;border:1px solid #FFCCC7;border-radius:8px;font-size:13px">
+        <b>🚫 Account นี้ถูกระงับ</b><br/>
+        ผู้ใช้คนนี้จะไม่สามารถ Login Application ได้ เนื่องจากแอปจะตรวจสอบสถานะและปฏิเสธการเข้าถึง
+      </div>` : ''}`;
+    const banBtn = document.getElementById('userModalBanBtn');
+    banBtn.textContent = u.status === 'banned' ? '🔓 ปลดแบน' : '🚫 แบนผู้ใช้นี้';
+    banBtn.className = `btn ${u.status === 'banned' ? 'btn-success' : 'btn-danger'}`;
+    // Hide delete btn for admins to prevent accidental self-delete
+    document.getElementById('userModalDeleteBtn').style.display = u.role === 'admin' && u.id === currentAdmin?.uid ? 'none' : 'inline-flex';
+    openModal('userModal');
+  } catch (err) {
+    console.error("Error viewing user:", err);
+    showToast("เกิดข้อผิดพลาดในการโหลดข้อมูลผู้ใช้นี้", "error");
+  }
 }
 
 async function toggleUserBan() {
@@ -1027,9 +1101,55 @@ async function toggleUserBan() {
 }
 
 async function quickBanUser(id, currentStatus) {
-  const newStatus = currentStatus === 'banned' ? 'active' : 'banned';
+  const isBanned = currentStatus === 'banned';
+  if (!isBanned && !confirm('แบนผู้ใช้คนนี้ใช่ไหม? เขาจะไม่สามารถ Login ได้ทันที')) return;
+  const newStatus = isBanned ? 'active' : 'banned';
   await db.collection('users').doc(id).update({ status: newStatus });
   showToast(newStatus === 'banned' ? '🚫 แบนแล้ว' : '🔓 ปลดแบนแล้ว', 'success');
+}
+
+async function confirmDeleteUser(id, name) {
+  if (!confirm(`ลบ Account ของ "${name}" ออกจากระบบ Firestore?
+
+หมายเหตุ: การลบนี้จะลบเฉพาะข้อมูลใน Firestore เท่านั้น Account ยัง Login ได้อยู่ (ต้องลบใน Firebase Console เพื่อลบสมบูรณ์)`)) return;
+  await db.collection('users').doc(id).delete();
+  closeModal('userModal');
+  showToast('🗑️ ลบข้อมูล Account แล้ว', 'success');
+}
+
+async function deleteUserAccount() {
+  if (!editUserTarget) return;
+  await confirmDeleteUser(editUserTarget.id, `${editUserTarget.firstName || ''} ${editUserTarget.lastName || ''}`.trim());
+}
+
+async function createAdminAccount() {
+  const firstName = document.getElementById('adminFirstName').value.trim();
+  const lastName = document.getElementById('adminLastName').value.trim();
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  if (!firstName || !email || !password) { showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error'); return; }
+  if (password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error'); return; }
+  try {
+    // Create a secondary firebase app to avoid signing out current admin
+    const secondaryApp = firebase.initializeApp(firebaseConfig, 'secondary_' + Date.now());
+    const userCred = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+    const uid = userCred.user.uid;
+    await db.collection('users').doc(uid).set({
+      firstName, lastName, email,
+      role: 'admin',
+      status: 'active',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await secondaryApp.auth().signOut();
+    closeModal('addAdminModal');
+    document.getElementById('adminFirstName').value = '';
+    document.getElementById('adminLastName').value = '';
+    document.getElementById('adminEmail').value = '';
+    document.getElementById('adminPassword').value = '';
+    showToast('✅ สร้าง Admin Account สำเร็จแล้ว!', 'success');
+  } catch (e) {
+    showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
 }
 
 // =================== SUPPORT / TICKETS ===================
