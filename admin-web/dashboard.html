@@ -307,7 +307,7 @@
           <div class="card">
             <div class="card-title" style="margin-bottom:20px">หมวดหมู่ยอดนิยม</div>
             <div id="categoryProgressList"></div>
-            <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="switchTab('products')">ดูรายงานฉบับเต็ม</button>
+            <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px" onclick="switchTab('products')">ดูสินค้าทั้งหมด</button>
           </div>
         </div>
       </div>
@@ -1338,10 +1338,45 @@ async function loadAnalyticsChart() {
       <div class="progress-pct">${pct}%</div>
     </div>`;
   }).join('') || '<div style="color:var(--text-light);text-align:center;padding:16px">ยังไม่มีข้อมูล</div>';
-  // Analytics stat changes (mock % for now)
-  document.getElementById('aStatUsersPct').textContent = '+12.5% จากเดือนที่แล้ว';
-  document.getElementById('aStatProductsPct').textContent = '+4.2% จากเดือนที่แล้ว';
-  document.getElementById('aStatOrdersPct').textContent = '-2.1% จากเดือนที่แล้ว';
+  // Analytics stat changes (Calculate real % from 30-day periods)
+  const nowMs = Date.now();
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  
+  const calcPct = (snapData) => {
+    let thisMonth = 0;
+    let lastMonth = 0;
+    snapData.forEach(d => {
+      const ts = d.data().createdAt?.toDate?.()?.getTime();
+      if (ts) {
+        if (nowMs - ts <= thirtyDaysMs) thisMonth++;
+        else if (nowMs - ts <= thirtyDaysMs * 2) lastMonth++;
+      }
+    });
+    if (lastMonth === 0) return thisMonth > 0 ? '+100%' : '0%';
+    const pct = ((thisMonth - lastMonth) / lastMonth) * 100;
+    return (pct > 0 ? '+' : '') + pct.toFixed(1) + '%';
+  };
+
+  try {
+    const [uSnap, pSnap, oSnap] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('products').get(),
+      db.collection('orders').get().catch(() => ({ forEach: () => {} }))
+    ]);
+
+    const setPctEl = (id, pctStr) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = pctStr + ' จากเดือนที่แล้ว';
+      el.className = 'stat-change ' + (pctStr.startsWith('-') ? 'down' : (pctStr === '0%' ? '' : 'up'));
+    };
+
+    setPctEl('aStatUsersPct', calcPct(uSnap));
+    setPctEl('aStatProductsPct', calcPct(pSnap));
+    setPctEl('aStatOrdersPct', calcPct(oSnap));
+  } catch (err) {
+    console.error("Error calculating percentages:", err);
+  }
 }
 
 // =================== CATEGORIES ===================

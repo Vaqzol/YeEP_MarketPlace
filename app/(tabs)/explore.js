@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 import { db, auth } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, getDocs } from 'firebase/firestore';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +25,24 @@ export default function ExploreScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [dbCategories, setDbCategories] = useState(FILTER_CHIPS);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'categories'));
+        if (!snap.empty) {
+          const cats = snap.docs.map(doc => ({ id: doc.data().name, name: doc.data().name }));
+          setDbCategories([{ id: 'all', name: 'ทั้งหมด' }, ...cats, { id: 'อื่นๆ', name: 'อื่นๆ' }]);
+        } else {
+          setDbCategories([{ id: 'all', name: 'ทั้งหมด' }, { id: 'อื่นๆ', name: 'อื่นๆ' }]);
+        }
+      } catch (err) {
+        console.log("Error loading categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const toggleLike = async (product) => {
     if (!auth.currentUser) return;
@@ -61,7 +79,7 @@ export default function ExploreScreen() {
 
   const filteredProducts = products.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = activeFilter === 'all' || item.category === activeFilter || (activeFilter === 'handmade' && item.category === 'อื่นๆ'); 
+    const matchesFilter = activeFilter === 'all' || item.category === activeFilter; 
     // Note: mapping logic can be refined later based on real categories
     return matchesSearch && matchesFilter;
   });
@@ -133,7 +151,7 @@ export default function ExploreScreen() {
       {/* Filter Chips */}
       <View style={{ height: 50, marginBottom: 10 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipContainer}>
-          {FILTER_CHIPS.map(chip => (
+          {dbCategories.map(chip => (
             <TouchableOpacity 
               key={chip.id} 
               style={[

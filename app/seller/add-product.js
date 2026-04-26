@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert, KeyboardAvoidingView, Platform, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, db } from '../../config/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -30,6 +30,24 @@ export default function AddProductScreen() {
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dbCategories, setDbCategories] = useState(CATEGORIES);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'categories'));
+        if (!snap.empty) {
+          const cats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setDbCategories([...cats, { id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        } else {
+          setDbCategories([{ id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        }
+      } catch (err) {
+        console.log("Error loading categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
   
   // แผนที่
   const [region, setRegion] = useState({
@@ -312,8 +330,8 @@ export default function AddProductScreen() {
                   </TouchableOpacity>
                 </View>
 
-                <FlatList
-                  data={CATEGORIES}
+                  <FlatList
+                    data={dbCategories}
                   keyExtractor={(item) => item.id}
                   renderItem={({ item }) => (
                     <TouchableOpacity 
@@ -323,7 +341,11 @@ export default function AddProductScreen() {
                         setIsCategoryModalVisible(false);
                       }}
                     >
-                      <Ionicons name={item.icon} size={24} color={COLORS.primary} style={styles.catIcon} />
+                      {item.icon && /^[a-zA-Z-]+$/.test(item.icon) ? (
+                        <Ionicons name={item.icon} size={24} color={COLORS.primary} style={styles.catIcon} />
+                      ) : (
+                        <Text style={[styles.catIcon, { fontSize: 20 }]}>{item.icon || '📦'}</Text>
+                      )}
                       <Text style={styles.catName}>{item.name}</Text>
                       {category === item.name && (
                         <Ionicons name="shield-checkmark" size={24} color={COLORS.success} />

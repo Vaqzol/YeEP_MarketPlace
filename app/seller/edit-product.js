@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { auth, db } from '../../config/firebase';
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, collection } from 'firebase/firestore';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -34,6 +34,7 @@ export default function EditProductScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [dbCategories, setDbCategories] = useState(CATEGORIES);
   
   // แผนที่
   const [region, setRegion] = useState({
@@ -48,6 +49,14 @@ export default function EditProductScreen() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        const catSnap = await getDocs(collection(db, 'categories'));
+        if (!catSnap.empty) {
+          const cats = catSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setDbCategories([...cats, { id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        } else {
+          setDbCategories([{ id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        }
+
         const docRef = doc(db, 'products', id);
         const docSnap = await getDoc(docRef);
         
@@ -396,7 +405,7 @@ export default function EditProductScreen() {
               </View>
 
               <FlatList
-                data={CATEGORIES}
+                data={dbCategories}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity 
@@ -406,7 +415,11 @@ export default function EditProductScreen() {
                       setIsCategoryModalVisible(false);
                     }}
                   >
-                    <Ionicons name={item.icon} size={24} color={COLORS.primary} style={styles.catIcon} />
+                    {item.icon && /^[a-zA-Z-]+$/.test(item.icon) ? (
+                      <Ionicons name={item.icon} size={24} color={COLORS.primary} style={styles.catIcon} />
+                    ) : (
+                      <Text style={[styles.catIcon, { fontSize: 20 }]}>{item.icon || '📦'}</Text>
+                    )}
                     <Text style={styles.catName}>{item.name}</Text>
                     {category === item.name && (
                       <Ionicons name="shield-checkmark" size={24} color={COLORS.success} />

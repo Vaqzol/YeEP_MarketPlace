@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
 import YeepLogo from '../../components/YeepLogo';
 import { auth, db } from '../../config/firebase';
-import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, getDocs } from 'firebase/firestore';
 
 import { useRouter } from 'expo-router';
 
@@ -24,6 +24,25 @@ export default function HomeScreen() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [dbCategories, setDbCategories] = useState(CATEGORIES);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'categories'));
+        if (!snap.empty) {
+          const cats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const formattedCats = cats.map(c => ({ ...c, color: c.color || '#DEE4EE' }));
+          setDbCategories([...formattedCats, { id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        } else {
+          setDbCategories([{ id: 'others', name: 'อื่นๆ', icon: 'ellipsis-horizontal-outline', color: '#DEE4EE' }]);
+        }
+      } catch (err) {
+        console.log("Error loading categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const toggleLike = async (product) => {
     if (!auth.currentUser) return;
@@ -156,12 +175,16 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.categoryRow}>
-          {CATEGORIES.map(item => (
+          {dbCategories.slice(0, 4).map(item => (
             <View key={item.id} style={styles.categoryItem}>
               <View style={[styles.categoryIconBg, { backgroundColor: item.color }]}>
-                <Ionicons name={item.icon} size={28} color="#fff" />
+                {item.icon && /^[a-zA-Z-]+$/.test(item.icon) ? (
+                  <Ionicons name={item.icon} size={28} color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: 24 }}>{item.icon || '📦'}</Text>
+                )}
               </View>
-              <Text style={styles.categoryName}>{item.name}</Text>
+              <Text style={styles.categoryName} numberOfLines={1}>{item.name}</Text>
             </View>
           ))}
         </View>

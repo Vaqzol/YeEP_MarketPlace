@@ -49,7 +49,8 @@ export default function ChatScreen() {
           setPartner({
             firstName: 'แอดมิน',
             lastName: 'YeEP',
-            profileImage: 'https://cdn-icons-png.flaticon.com/512/6124/6124997.png'
+            profileImage: null,
+            isAdmin: true
           });
         } else if (sellerId) {
           const userRef = doc(db, 'users', sellerId);
@@ -167,8 +168,10 @@ export default function ChatScreen() {
     return (
       <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.partnerMessageRow]}>
         {showAvatar && (
-          <View style={styles.partnerAvatarSmall}>
-            {partner?.profileImage ? (
+          <View style={[styles.partnerAvatarSmall, partner?.isAdmin && styles.adminAvatarSmall]}>
+            {partner?.isAdmin ? (
+              <Ionicons name="shield-checkmark" size={14} color="white" />
+            ) : partner?.profileImage ? (
               <Image source={{ uri: partner.profileImage }} style={styles.avatarImgSmall} />
             ) : (
               <Ionicons name="person" size={14} color="#999" />
@@ -222,8 +225,10 @@ export default function ChatScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerProfile}>
-            <View style={styles.avatarContainer}>
-              {partner?.profileImage ? (
+            <View style={[styles.avatarContainer, partner?.isAdmin && styles.adminAvatarContainer]}>
+              {partner?.isAdmin ? (
+                <Ionicons name="shield-checkmark" size={26} color="white" />
+              ) : partner?.profileImage ? (
                 <Image source={{ uri: partner.profileImage }} style={styles.avatarImg} />
               ) : (
                 <Ionicons name="person" size={24} color="#999" />
@@ -331,6 +336,7 @@ const styles = StyleSheet.create({
   headerBtn: { padding: 5 },
   headerProfile: { flex: 1, flexDirection: 'row', alignItems: 'center', marginLeft: 10 },
   avatarContainer: { position: 'relative', width: 40, height: 40, borderRadius: 20, backgroundColor: '#EEE', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  adminAvatarContainer: { backgroundColor: '#3B5BDB' },
   avatarImg: { width: '100%', height: '100%' },
   onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#27AE60', borderWidth: 2, borderColor: 'white' },
   partnerName: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
@@ -357,7 +363,8 @@ const styles = StyleSheet.create({
   myMessageRow: { alignSelf: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' },
   partnerMessageRow: { alignSelf: 'flex-start', alignItems: 'flex-end' },
 
-  partnerAvatarSmall: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEE', overflow: 'hidden', marginRight: 8, marginBottom: 15 },
+  partnerAvatarSmall: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#EEE', overflow: 'hidden', marginRight: 8, marginBottom: 15, justifyContent: 'center', alignItems: 'center' },
+  adminAvatarSmall: { backgroundColor: '#3B5BDB' },
   avatarImgSmall: { width: '100%', height: '100%' },
 
   myBubbleContainer: { alignItems: 'flex-end' },

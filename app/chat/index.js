@@ -64,7 +64,8 @@ export default function ChatListScreen() {
         [uid]: {
           firstName: 'แอดมิน',
           lastName: 'YeEP',
-          profileImage: 'https://cdn-icons-png.flaticon.com/512/6124/6124997.png'
+          profileImage: null, // ใช้ admin avatar แทน
+          isAdmin: true
         }
       }));
       return;
@@ -114,7 +115,11 @@ export default function ChatListScreen() {
         })}
       >
         <View style={styles.avatarWrapper}>
-          {partner?.profileImage ? (
+          {partner?.isAdmin ? (
+            <View style={[styles.chatAvatar, styles.adminAvatar]}>
+              <Ionicons name="shield-checkmark" size={26} color="white" />
+            </View>
+          ) : partner?.profileImage ? (
             <Image source={{ uri: partner.profileImage }} style={styles.chatAvatar} />
           ) : (
             <View style={[styles.chatAvatar, styles.placeholderAvatar]}>
@@ -199,6 +204,7 @@ const styles = StyleSheet.create({
   avatarWrapper: { position: 'relative' },
   chatAvatar: { width: 55, height: 55, borderRadius: 27.5, backgroundColor: '#F0F2F5' },
   placeholderAvatar: { justifyContent: 'center', alignItems: 'center' },
+  adminAvatar: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#3B5BDB' },
   onlineIndicator: {
     position: 'absolute', bottom: 2, right: 2, width: 12, height: 12,
     borderRadius: 6, backgroundColor: '#27AE60', borderWidth: 2, borderColor: 'white'
