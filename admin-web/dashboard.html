@@ -909,12 +909,33 @@ async function confirmReject() {
 
 // =================== ALL PRODUCTS ===================
 function listenAllProducts() {
-  db.collection('products').where('status', '==', 'พร้อมขาย').onSnapshot(snap => {
-    allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const catSet = new Set(allProducts.map(p => p.category).filter(Boolean));
+  // Load categories from categories collection first
+  db.collection('categories').get().then(catSnap => {
     const sel = document.getElementById('productsCatFilter');
-    sel.innerHTML = '<option value="">ทุกหมวดหมู่สินค้า</option>' + [...catSet].map(c => `<option value="${c}">${c}</option>`).join('');
-    filterProducts();
+    const dbCats = catSnap.docs.map(d => d.data().name).filter(Boolean);
+    const updateCatFilter = (extraCats = []) => {
+      const allCats = [...new Set([...dbCats, ...extraCats])];
+      sel.innerHTML = '<option value="">ทุกหมวดหมู่สินค้า</option>'
+        + allCats.map(c => `<option value="${c}">${c}</option>`).join('')
+        + '<option value="อื่นๆ">อื่นๆ</option>';
+    };
+    updateCatFilter();
+
+    db.collection('products').where('status', '==', 'พร้อมขาย').onSnapshot(snap => {
+      allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const prodCats = allProducts.map(p => p.category).filter(Boolean);
+      updateCatFilter(prodCats); // merge with any unlisted categories from products
+      filterProducts();
+    });
+  }).catch(() => {
+    // Fallback: just use product categories if categories collection fails
+    db.collection('products').where('status', '==', 'พร้อมขาย').onSnapshot(snap => {
+      allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const catSet = new Set(allProducts.map(p => p.category).filter(Boolean));
+      const sel = document.getElementById('productsCatFilter');
+      sel.innerHTML = '<option value="">ทุกหมวดหมู่สินค้า</option>' + [...catSet].map(c => `<option value="${c}">${c}</option>`).join('');
+      filterProducts();
+    });
   });
 }
 
