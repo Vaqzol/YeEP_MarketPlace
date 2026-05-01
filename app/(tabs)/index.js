@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [dbCategories, setDbCategories] = useState(CATEGORIES);
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function HomeScreen() {
   }, [auth.currentUser?.uid]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <YeepLogo size={24} />
 
@@ -126,6 +127,12 @@ export default function HomeScreen() {
                 <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'white' }} />
               </View>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.iconBtn}
+            onPress={() => router.push('/wishlist')}
+          >
+            <Ionicons name="heart-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.iconBtn}
@@ -147,9 +154,23 @@ export default function HomeScreen() {
             style={styles.searchInput}
             placeholder="ค้นหาสินค้า..."
             placeholderTextColor={COLORS.textLight}
+            value={searchText}
+            onChangeText={setSearchText}
+            returnKeyType="search"
+            onSubmitEditing={() => {
+              if (searchText.trim()) {
+                router.push({ pathname: '/(tabs)/explore', params: { search: searchText.trim() } });
+                setSearchText('');
+              }
+            }}
           />
-          <TouchableOpacity>
-            <Ionicons name="mic-outline" size={20} color={COLORS.icon} />
+          <TouchableOpacity onPress={() => {
+            if (searchText.trim()) {
+              router.push({ pathname: '/(tabs)/explore', params: { search: searchText.trim() } });
+              setSearchText('');
+            }
+          }}>
+            <Ionicons name="search" size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
@@ -158,7 +179,7 @@ export default function HomeScreen() {
           <Text style={styles.promoSubtitle}>สินค้าแนะนำสำหรับคุณ</Text>
           <Text style={styles.promoTitle}>แหล่งรวมสินค้าคุณภาพ</Text>
           <Text style={styles.promoDesc}>สินค้าแฮนด์เมด{'\n'}ราคาย่อมเยาสินค้านักศึกษา</Text>
-          <TouchableOpacity style={styles.promoBtn}>
+          <TouchableOpacity style={styles.promoBtn} onPress={() => router.push('/(tabs)/explore')}>
             <Text style={styles.promoBtnText}>ช้อปเลย</Text>
           </TouchableOpacity>
           <View style={styles.bannerImagePlaceholder}>
@@ -169,14 +190,14 @@ export default function HomeScreen() {
         {/* Categories */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>หมวดหมู่</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
             <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.categoryRow}>
           {dbCategories.slice(0, 4).map(item => (
-            <View key={item.id} style={styles.categoryItem}>
+            <TouchableOpacity key={item.id} style={styles.categoryItem} onPress={() => router.push({ pathname: '/(tabs)/explore', params: { category: item.name } })}>
               <View style={[styles.categoryIconBg, { backgroundColor: item.color }]}>
                 {item.icon && /^[a-zA-Z-]+$/.test(item.icon) ? (
                   <Ionicons name={item.icon} size={28} color="#fff" />
@@ -185,14 +206,14 @@ export default function HomeScreen() {
                 )}
               </View>
               <Text style={styles.categoryName} numberOfLines={1}>{item.name}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* For You Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>สำหรับคุณ</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
             <Text style={styles.seeAllText}>ดูเพิ่มเติม</Text>
           </TouchableOpacity>
         </View>

@@ -289,7 +289,7 @@ export default function SellScreen() {
 
   // ===== RENDER =====
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>

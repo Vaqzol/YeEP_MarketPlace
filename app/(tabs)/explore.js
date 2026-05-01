@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { db, auth } from '../../config/firebase';
 import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, getDocs } from 'firebase/firestore';
 
@@ -21,10 +21,11 @@ const FILTER_CHIPS = [
 
 export default function ExploreScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [search, setSearch] = useState(params.search || '');
+  const [activeFilter, setActiveFilter] = useState(params.category || 'all');
   const [dbCategories, setDbCategories] = useState(FILTER_CHIPS);
 
   useEffect(() => {
@@ -131,7 +132,7 @@ export default function ExploreScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Search Header */}
       <View style={styles.header}>
         <View style={styles.searchBar}>

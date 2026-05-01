@@ -18,6 +18,9 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -38,6 +41,28 @@ export default function ProfileScreen() {
 
     fetchProfile();
   }, []);
+
+  const handleSaveProfile = async () => {
+    if (!editFirstName.trim() || !editLastName.trim()) {
+      Alert.alert('กรุณากรอกข้อมูล', 'ชื่อและนามสกุลไม่สามารถเว้นว่างได้ครับ');
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      await updateDoc(userRef, {
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+      });
+      setUserData({ ...userData, firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      setIsEditing(false);
+      Alert.alert('สำเร็จ', 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้วครับ');
+    } catch (error) {
+      Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ครับ');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const pickImage = async () => {
     try {
@@ -112,7 +137,7 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header matching main screen */}
       <View style={styles.header}>
         <YeepLogo size={24} />
@@ -148,15 +173,49 @@ export default function ProfileScreen() {
 
         {/* Profile Form */}
         <View style={styles.form}>
-          <Text style={styles.fieldLabel}>ชื่อ</Text>
-          <View style={styles.inputBox}>
-            <Text style={styles.inputText}>{userData?.firstName || 'NongOpal'}</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.fieldLabel}>ชื่อ</Text>
+            {!isEditing && (
+              <TouchableOpacity onPress={() => {
+                setEditFirstName(userData?.firstName || '');
+                setEditLastName(userData?.lastName || '');
+                setIsEditing(true);
+              }}>
+                <Text style={styles.linkText}>แก้ไขโปรไฟล์</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          {isEditing ? (
+            <View style={styles.inputBox}>
+              <TextInput style={styles.inputText} value={editFirstName} onChangeText={setEditFirstName} placeholder="กรอกชื่อ" />
+            </View>
+          ) : (
+            <View style={styles.inputBox}>
+              <Text style={styles.inputText}>{userData?.firstName || '-'}</Text>
+            </View>
+          )}
 
           <Text style={styles.fieldLabel}>นามสกุล</Text>
-          <View style={styles.inputBox}>
-            <Text style={styles.inputText}>{userData?.lastName || 'MaiKinPak'}</Text>
-          </View>
+          {isEditing ? (
+            <View style={styles.inputBox}>
+              <TextInput style={styles.inputText} value={editLastName} onChangeText={setEditLastName} placeholder="กรอกนามสกุล" />
+            </View>
+          ) : (
+            <View style={styles.inputBox}>
+              <Text style={styles.inputText}>{userData?.lastName || '-'}</Text>
+            </View>
+          )}
+
+          {isEditing && (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+              <TouchableOpacity style={[styles.blueBtn, { flex: 1, backgroundColor: '#E0E5EC' }]} onPress={() => setIsEditing(false)}>
+                <Text style={[styles.blueBtnText, { color: COLORS.text }]}>ยกเลิก</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.blueBtn, { flex: 1, backgroundColor: COLORS.primary }]} onPress={handleSaveProfile} disabled={isUpdating}>
+                <Text style={styles.blueBtnText}>{isUpdating ? 'กำลังบันทึก...' : 'บันทึก'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <Text style={styles.fieldLabel}>อีเมล</Text>
           <View style={styles.inputBox}>
@@ -183,6 +242,10 @@ export default function ProfileScreen() {
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.blueBtn} onPress={() => router.push('/(tabs)/orders')}>
             <Text style={styles.blueBtnText}>ประวัติการสั่งซื้อ</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.blueBtn, { backgroundColor: '#E8546C' }]} onPress={() => router.push('/wishlist')}>
+            <Text style={styles.blueBtnText}>❤️ สินค้าที่ถูกใจ</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.blueBtn, { backgroundColor: '#5B7FC4' }]} onPress={() => router.push({

@@ -7,9 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  // ใช้ insets.bottom เต็มจำนวนให้กับทั้ง iOS และ Android ถ้าไม่มี (เช่น Android รุ่นเก่า) ให้เว้นขั้นต่ำ 16
-  const bottomPadding = Platform.OS === 'ios' ? insets.bottom : Math.max(insets.bottom, 16);
-  const tabHeight = 60 + bottomPadding;
+  const bottomPadding = Platform.OS === 'ios' ? insets.bottom : Math.max(insets.bottom, 4);
+  const tabHeight = 56 + bottomPadding;
 
   return (
     <Tabs
@@ -18,17 +17,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.icon,
         tabBarStyle: {
-          borderTopWidth: 0,           // <--- แก้จาก 1 เป็น 0
-          elevation: 0,                // <--- เพิ่มบรรทัดนี้สำหรับ Android เพื่อเอาเงาออก (ถ้ามี)
+          borderTopWidth: 0,
+          elevation: 0,
           shadowOpacity: 0,
-          minHeight: tabHeight,
+          height: tabHeight,
           paddingBottom: bottomPadding,
-          paddingTop: 8,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          marginTop: 2,
-          marginBottom: Platform.OS === 'android' ? 4 : 0,
+          marginTop: 1,
+          marginBottom: Platform.OS === 'android' ? 2 : 0,
         }
       }}
     >
