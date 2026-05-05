@@ -20,7 +20,7 @@ export default function CheckoutSuccessScreen() {
       </View>
 
       <View style={styles.content}>
-        
+
         {/* Success Card */}
         <View style={styles.successCard}>
           <View style={styles.checkCircle}>
@@ -36,18 +36,14 @@ export default function CheckoutSuccessScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionsBox}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.primaryBtn}
-            onPress={() => {
-              // Nav to My Orders (placeholder if it doesn't exist yet, we just go to home or user profile)
-              router.push('/');
-              alert('กำลังพาไปหน้า คำสั่งซื้อของฉัน (กำลังพัฒนา)');
-            }}
+            onPress={() => { router.push('/(tabs)/orders'); }}
           >
             <Text style={styles.primaryBtnText}>คำสั่งซื้อของฉัน</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.secondaryBtn}
             onPress={() => router.push('/')}
           >
@@ -62,10 +58,10 @@ export default function CheckoutSuccessScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAFC' },
-  
+
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 15, paddingVertical: 15, 
+    paddingHorizontal: 15, paddingVertical: 15,
     backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
   },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
@@ -111,16 +107,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: 15, width: '100%', paddingHorizontal: 10
   },
   primaryBtn: {
-    flex: 1, backgroundColor: '#6C94C1', 
-    height: 48, borderRadius: 10, 
+    flex: 1, backgroundColor: '#6C94C1',
+    height: 48, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center'
   },
   primaryBtnText: {
     color: 'white', fontWeight: 'bold', fontSize: 15
   },
   secondaryBtn: {
-    flex: 1, backgroundColor: '#6C94C1', 
-    height: 48, borderRadius: 10, 
+    flex: 1, backgroundColor: '#6C94C1',
+    height: 48, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center'
   },
   secondaryBtnText: {

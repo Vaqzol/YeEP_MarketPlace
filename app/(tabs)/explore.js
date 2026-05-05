@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, 
   Image, Dimensions, ActivityIndicator, FlatList 
@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SIZES, FONTS } from '../../constants/theme';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { db, auth } from '../../config/firebase';
 import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion, arrayRemove, getDocs } from 'firebase/firestore';
 
@@ -27,6 +27,26 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState(params.search || '');
   const [activeFilter, setActiveFilter] = useState(params.category || 'all');
   const [dbCategories, setDbCategories] = useState(FILTER_CHIPS);
+
+  useFocusEffect(
+    useCallback(() => {
+      // เมื่อเข้ามาที่หน้านี้
+      if (params.search) {
+        setSearch(params.search);
+        setActiveFilter('all');
+      } else if (params.category) {
+        setActiveFilter(params.category);
+        setSearch('');
+      }
+
+      // เมื่อออกจากหน้านี้ (เสีย focus)
+      return () => {
+        setSearch('');
+        setActiveFilter('all');
+        router.setParams({ search: '', category: '' });
+      };
+    }, [params.search, params.category])
+  );
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -110,15 +130,6 @@ export default function ExploreScreen() {
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
         
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={12} color="#FFC107" />
-          <Text style={styles.ratingText}>
-            {item.reviewCount > 0 
-              ? (item.totalRating / item.reviewCount).toFixed(1) 
-              : '0'} ({item.reviewCount || 0})
-          </Text>
-        </View>
-
         <Text style={styles.productPrice}>{item.price} บาท</Text>
 
         <TouchableOpacity 
@@ -143,9 +154,6 @@ export default function ExploreScreen() {
             value={search}
             onChangeText={setSearch}
           />
-          <TouchableOpacity>
-            <Ionicons name="mic-outline" size={20} color={COLORS.icon} />
-          </TouchableOpacity>
         </View>
       </View>
 

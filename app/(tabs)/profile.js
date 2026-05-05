@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  Image, ActivityIndicator, Alert, TextInput, Platform 
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Image, ActivityIndicator, Alert, TextInput, Platform, Modal, FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,15 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import YeepLogo from '../../components/YeepLogo';
 
+const BANKS = [
+  { name: 'ธนาคารกรุงเทพ', code: 'BBL', icon: require('../../assets/Bank_icon/กรุงเทพ.png') },
+  { name: 'ธนาคารกสิกรไทย', code: 'KBANK', icon: require('../../assets/Bank_icon/กสิกร.png') },
+  { name: 'ธนาคารไทยพาณิชย์', code: 'SCB', icon: require('../../assets/Bank_icon/ไทยพาณิชย์ SCB.png') },
+  { name: 'ธนาคารกรุงไทย', code: 'KTB', icon: require('../../assets/Bank_icon/กรุงไทย2.png') },
+  { name: 'ธนาคารกรุงศรีอยุธยา', code: 'BAY', icon: require('../../assets/Bank_icon/กรุงศรี 2.png') },
+  { name: 'TrueMoney Wallet', code: 'TRUE', icon: require('../../assets/Bank_icon/ทรูวอเลต.png') },
+];
+
 export default function ProfileScreen() {
   const router = useRouter();
   const [userData, setUserData] = useState(null);
@@ -21,6 +30,10 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
+  const [editBankName, setEditBankName] = useState('');
+  const [editBankNo, setEditBankNo] = useState('');
+  const [editBankAccountName, setEditBankAccountName] = useState('');
+  const [showBankPicker, setShowBankPicker] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -53,8 +66,18 @@ export default function ProfileScreen() {
       await updateDoc(userRef, {
         firstName: editFirstName.trim(),
         lastName: editLastName.trim(),
+        bankName: editBankName.trim(),
+        bankAccountNo: editBankNo.trim(),
+        bankAccountName: editBankAccountName.trim(),
       });
-      setUserData({ ...userData, firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      setUserData({
+        ...userData,
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim(),
+        bankName: editBankName.trim(),
+        bankAccountNo: editBankNo.trim(),
+        bankAccountName: editBankAccountName.trim(),
+      });
       setIsEditing(false);
       Alert.alert('สำเร็จ', 'อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้วครับ');
     } catch (error) {
@@ -85,14 +108,14 @@ export default function ProfileScreen() {
       if (!result.canceled) {
         setIsUpdating(true);
         const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        
+
         // 3. อัปเดตลง Firestore
         if (auth.currentUser) {
           const userRef = doc(db, 'users', auth.currentUser.uid);
           await updateDoc(userRef, {
             profileImage: base64Img
           });
-          
+
           // 4. อัปเดต State ในหน้าจอ
           setUserData({ ...userData, profileImage: base64Img });
           Alert.alert('สำเร็จ', 'เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว');
@@ -112,8 +135,8 @@ export default function ProfileScreen() {
       'คุณต้องการออกจากระบบหรือไม่?',
       [
         { text: 'ยกเลิก', style: 'cancel' },
-        { 
-          text: 'ออกจากระบบ', 
+        {
+          text: 'ออกจากระบบ',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -142,14 +165,15 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <YeepLogo size={24} />
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn}
+            onPress={() => router.push('/cart')}>
             <Ionicons name="cart-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
+
         <Text style={styles.pageTitle}>บัญชีของฉัน</Text>
 
         {/* Profile Avatar */}
@@ -179,6 +203,9 @@ export default function ProfileScreen() {
               <TouchableOpacity onPress={() => {
                 setEditFirstName(userData?.firstName || '');
                 setEditLastName(userData?.lastName || '');
+                setEditBankName(userData?.bankName || '');
+                setEditBankNo(userData?.bankAccountNo || '');
+                setEditBankAccountName(userData?.bankAccountName || '');
                 setIsEditing(true);
               }}>
                 <Text style={styles.linkText}>แก้ไขโปรไฟล์</Text>
@@ -229,14 +256,93 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           <View style={styles.inputBox}>
-            <TextInput 
+            <TextInput
               style={styles.passwordInput}
-              value="password"
-              secureTextEntry={true}
+              value="********"
               editable={false}
             />
           </View>
+
+          {/* Bank Info Section */}
+          <Text style={[styles.fieldLabel, { marginTop: 20, color: COLORS.primary }]}>ข้อมูลบัญชีธนาคาร (สำหรับผู้ขาย)</Text>
+
+          <Text style={styles.fieldLabel}>ธนาคาร</Text>
+          {isEditing ? (
+            <TouchableOpacity 
+              style={styles.inputBox} 
+              onPress={() => setShowBankPicker(true)}
+            >
+              <Text style={[styles.inputText, !editBankName && { color: '#AAA' }]}>
+                {editBankName || 'เลือกธนาคาร'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={COLORS.textLight} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.inputBox}>
+              <Text style={styles.inputText}>{userData?.bankName || '-'}</Text>
+            </View>
+          )}
+
+          <Text style={styles.fieldLabel}>เลขที่บัญชี</Text>
+          {isEditing ? (
+            <View style={styles.inputBox}>
+              <TextInput style={styles.inputText} value={editBankNo} onChangeText={setEditBankNo} placeholder="เช่น 012-x-xxxx3-4" keyboardType="numeric" />
+            </View>
+          ) : (
+            <View style={styles.inputBox}>
+              <Text style={styles.inputText}>{userData?.bankAccountNo || '-'}</Text>
+            </View>
+          )}
+
+          <Text style={styles.fieldLabel}>ชื่อบัญชี</Text>
+          {isEditing ? (
+            <View style={styles.inputBox}>
+              <TextInput style={styles.inputText} value={editBankAccountName} onChangeText={setEditBankAccountName} placeholder="เช่น นายสมชาย ใจดี" />
+            </View>
+          ) : (
+            <View style={styles.inputBox}>
+              <Text style={styles.inputText}>{userData?.bankAccountName || '-'}</Text>
+            </View>
+          )}
         </View>
+
+        {/* Bank Picker Modal */}
+        <Modal
+          visible={showBankPicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowBankPicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.bankPickerContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>เลือกธนาคาร</Text>
+                <TouchableOpacity onPress={() => setShowBankPicker(false)}>
+                  <Ionicons name="close" size={24} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={BANKS}
+                keyExtractor={item => item.code}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.bankItem}
+                    onPress={() => {
+                      setEditBankName(item.name);
+                      setShowBankPicker(false);
+                    }}
+                  >
+                    <Image source={item.icon} style={styles.bankItemIcon} />
+                    <Text style={styles.bankItemName}>{item.name}</Text>
+                    {editBankName === item.name && (
+                      <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          </View>
+        </Modal>
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
@@ -301,4 +407,45 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
   blueBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bankPickerContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  bankItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  bankItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 15,
+  },
+  bankItemName: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.text,
+  },
 });

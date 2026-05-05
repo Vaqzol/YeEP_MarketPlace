@@ -80,14 +80,15 @@ export default function HomeScreen() {
     let lastSeenInterval = null;
     if (auth.currentUser) {
       const updateLastSeen = () => {
-        updateDoc(doc(db, 'users', auth.currentUser.uid), { lastSeen: serverTimestamp() }).catch(() => {});
+        if (!auth.currentUser) return;
+        updateDoc(doc(db, 'users', auth.currentUser.uid), { lastSeen: serverTimestamp() }).catch(() => { });
       };
       updateLastSeen(); // update immediately
       lastSeenInterval = setInterval(updateLastSeen, 60000); // and every minute
     }
 
     // 2. ตรวจสอบแจ้งเตือนแชทใหม่
-    let chatUnsubscribe = () => {};
+    let chatUnsubscribe = () => { };
     if (auth.currentUser) {
       const chatQuery = query(
         collection(db, 'chats'),
@@ -95,13 +96,14 @@ export default function HomeScreen() {
       );
 
       chatUnsubscribe = onSnapshot(chatQuery, (snapshot) => {
+        if (!auth.currentUser) return;
         // ตรวจสอบว่ามีแชทไหนที่ผู้ส่งล่าสุดไม่ใช่เรา (เป็นคนอื่นทักมา)
         const hasNew = snapshot.docs.some(doc => {
           const data = doc.data();
           return data.lastSenderId !== auth.currentUser.uid;
         });
         setHasNewMessage(hasNew);
-      });
+      }, (err) => console.log('Chat listener error', err));
     }
 
     return () => {
@@ -117,7 +119,7 @@ export default function HomeScreen() {
         <YeepLogo size={24} />
 
         <View style={styles.headerRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => router.push('/chat')}
           >
@@ -128,13 +130,13 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => router.push('/wishlist')}
           >
             <Ionicons name="heart-outline" size={24} color={COLORS.text} />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => router.push('/cart')}
           >
@@ -227,17 +229,17 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.productRow}>
             {products.slice(0, 4).map(product => (
-              <TouchableOpacity 
-                key={product.id} 
+              <TouchableOpacity
+                key={product.id}
                 style={styles.productCard}
                 onPress={() => router.push(`/product/${product.id}`)}
               >
                 <View style={styles.imageContainer}>
-                  <Image 
-                    source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }} 
-                    style={styles.productImage} 
+                  <Image
+                    source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }}
+                    style={styles.productImage}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.likeBtn}
                     onPress={() => toggleLike(product)}
                   >
@@ -251,15 +253,6 @@ export default function HomeScreen() {
 
                 <View style={styles.productInfo}>
                   <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-
-                  <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={12} color="#FFC107" />
-                    <Text style={styles.ratingText}>
-                      {product.reviewCount > 0 
-                        ? (product.totalRating / product.reviewCount).toFixed(1) 
-                        : '0'} ({product.reviewCount || 0})
-                    </Text>
-                  </View>
 
                   <View style={styles.priceRow}>
                     <Text style={styles.productPrice}>{product.price} บาท</Text>
@@ -276,21 +269,22 @@ export default function HomeScreen() {
         {/* Latest Items Section */}
         <View style={[styles.sectionHeader, { marginTop: 20 }]}>
           <Text style={styles.sectionTitle}>รายการล่าสุด</Text>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/explore')}>
             <Text style={styles.seeAllText}>ดูทั้งหมด</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.latestScroll}>
           {products.slice(0, 10).map(product => (
-            <TouchableOpacity 
-              key={product.id} 
+            <TouchableOpacity
+              key={product.id}
               style={styles.latestCard}
               onPress={() => router.push(`/product/${product.id}`)}
             >
-              <Image 
-                source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }} 
-                style={styles.latestCardImg} 
+              <Image
+                source={{ uri: product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150' }}
+                style={styles.latestCardImg}
               />
               <View style={styles.latestCardInfo}>
                 <Text style={styles.latestCardName} numberOfLines={1}>{product.name}</Text>
@@ -306,7 +300,7 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.newArrivalTitle}>สินค้ามาใหม่</Text>
             <Text style={styles.newArrivalSub}>ค้นพบสไตล์ล่าสุด</Text>
-            <TouchableOpacity style={styles.exploreBtn}>
+            <TouchableOpacity style={styles.exploreBtn} onPress={() => router.push('/(tabs)/explore')}>
               <Text style={styles.exploreBtnText}>สำรวจ</Text>
             </TouchableOpacity>
           </View>

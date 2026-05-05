@@ -16,6 +16,7 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(true);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]); // Array of item IDs
 
   const handleApplyPromo = () => {
     if (!promoCode.trim()) {
@@ -50,6 +51,9 @@ export default function CartScreen() {
       items.sort((a, b) => (b.addedAt?.toDate() || 0) - (a.addedAt?.toDate() || 0));
       setCartItems(items);
       setLoading(false);
+    }, (error) => {
+      console.log('Cart listener error:', error.message);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -83,51 +87,84 @@ export default function CartScreen() {
     ]);
   };
 
-  const subTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const toggleSelectItem = (item) => {
+    const isSelected = selectedItems.includes(item.id);
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter(id => id !== item.id));
+    } else {
+      // Check if we already have items from a different seller
+      const otherSelectedItems = cartItems.filter(ci => selectedItems.includes(ci.id));
+      if (otherSelectedItems.length > 0 && otherSelectedItems[0].sellerId !== item.sellerId) {
+        Alert.alert(
+          'ชำระเงินได้ทีละร้านค้า',
+          'ขออภัยครับ ระบบรองรับการโอนเงินให้ผู้ขายโดยตรง จึงต้องสั่งซื้อแยกทีละร้านค้าครับ'
+        );
+        return;
+      }
+      setSelectedItems([...selectedItems, item.id]);
+    }
+  };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.cartCard}>
-      <Image 
-        source={{ uri: item.image || 'https://via.placeholder.com/80' }} 
-        style={styles.itemImage} 
-      />
-      <View style={styles.itemInfo}>
-        <View style={styles.itemHeader}>
-          <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-          <TouchableOpacity 
-            style={styles.deleteBtn}
-            onPress={() => handleRemoveItem(item.id)}
-          >
-            <Ionicons name="close" size={18} color="#A0A0A0" />
-          </TouchableOpacity>
-        </View>
-        
-        {/* จำลองตัวเลือกสินค้า เนื่องจากใน Firestore เรายังไม่ได้ทำระบบตัวเลือกแบบละเอียด */}
-        <Text style={styles.itemVariant}>ขนาดปกติ</Text>
-        
-        <View style={styles.itemFooter}>
-          <Text style={styles.itemPrice}>{item.price?.toLocaleString()} บาท</Text>
+  const selectedCartItems = cartItems.filter(item => selectedItems.includes(item.id));
+  const subTotal = selectedCartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItemsCount = selectedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const renderItem = ({ item }) => {
+    const isSelected = selectedItems.includes(item.id);
+    
+    return (
+      <View style={[styles.cartCard, isSelected && styles.cartCardSelected]}>
+        <TouchableOpacity 
+          style={styles.checkboxContainer} 
+          onPress={() => toggleSelectItem(item)}
+        >
+          <Ionicons 
+            name={isSelected ? "checkbox" : "square-outline"} 
+            size={22} 
+            color={isSelected ? COLORS.primary : "#CCC"} 
+          />
+        </TouchableOpacity>
+
+        <Image 
+          source={{ uri: item.image || 'https://via.placeholder.com/80' }} 
+          style={styles.itemImage} 
+        />
+        <View style={styles.itemInfo}>
+          <View style={styles.itemHeader}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+            <TouchableOpacity 
+              style={styles.deleteBtn}
+              onPress={() => handleRemoveItem(item.id)}
+            >
+              <Ionicons name="close" size={18} color="#A0A0A0" />
+            </TouchableOpacity>
+          </View>
           
-          <View style={styles.qtyContainer}>
-            <TouchableOpacity 
-              style={styles.qtyBtn}
-              onPress={() => handleUpdateQuantity(item.id, item.quantity, -1)}
-            >
-              <Ionicons name="remove" size={16} color={COLORS.text} />
-            </TouchableOpacity>
-            <Text style={styles.qtyText}>{item.quantity}</Text>
-            <TouchableOpacity 
-              style={styles.qtyBtn}
-              onPress={() => handleUpdateQuantity(item.id, item.quantity, 1)}
-            >
-              <Ionicons name="add" size={16} color={COLORS.text} />
-            </TouchableOpacity>
+          <Text style={styles.itemVariant}>คนขาย: {item.sellerName || 'ร้านค้าทั่วไป'}</Text>
+          
+          <View style={styles.itemFooter}>
+            <Text style={styles.itemPrice}>{item.price?.toLocaleString()} บาท</Text>
+            
+            <View style={styles.qtyContainer}>
+              <TouchableOpacity 
+                style={styles.qtyBtn}
+                onPress={() => handleUpdateQuantity(item.id, item.quantity, -1)}
+              >
+                <Ionicons name="remove" size={16} color={COLORS.text} />
+              </TouchableOpacity>
+              <Text style={styles.qtyText}>{item.quantity}</Text>
+              <TouchableOpacity 
+                style={styles.qtyBtn}
+                onPress={() => handleUpdateQuantity(item.id, item.quantity, 1)}
+              >
+                <Ionicons name="add" size={16} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (!auth.currentUser) {
     return (
@@ -154,9 +191,7 @@ export default function CartScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>ตะกร้าสินค้า</Text>
-        <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.headerBtn} />
       </View>
 
       {loading ? (
@@ -168,7 +203,7 @@ export default function CartScreen() {
           <Ionicons name="cart-outline" size={80} color="#E0E0E0" />
           <Text style={styles.emptyText}>ไม่มีสินค้าในตะกร้า</Text>
           <Text style={styles.emptySubText}>ลองค้นหาสินค้าที่ถูกใจแล้วเพิ่มลงตะกร้าเลย!</Text>
-          <TouchableOpacity style={styles.exploreBtn} onPress={() => router.push('/')}>
+          <TouchableOpacity style={styles.exploreBtn} onPress={() => router.push('/(tabs)/explore')}>
             <Text style={styles.exploreBtnText}>เลือกซื้อสินค้าต่อ</Text>
           </TouchableOpacity>
         </View>
@@ -225,10 +260,20 @@ export default function CartScreen() {
             </View>
 
             <TouchableOpacity 
-              style={styles.checkoutBtn}
-              onPress={() => router.push('/checkout')}
+              style={[styles.checkoutBtn, selectedItems.length === 0 && styles.disabledBtn]}
+              onPress={() => {
+                if (selectedItems.length === 0) {
+                  Alert.alert('กรุณาเลือกสินค้า', 'โปรดเลือกสินค้าที่ต้องการสั่งซื้ออย่างน้อย 1 รายการครับ');
+                  return;
+                }
+                router.push({
+                  pathname: '/checkout',
+                  params: { selectedItemIds: JSON.stringify(selectedItems) }
+                });
+              }}
+              disabled={selectedItems.length === 0}
             >
-              <Text style={styles.checkoutBtnText}>ดำเนินการชำระเงิน</Text>
+              <Text style={styles.checkoutBtnText}>ดำเนินการชำระเงิน ({selectedItems.length})</Text>
               <Ionicons name="arrow-forward" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -256,6 +301,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', backgroundColor: 'white', 
     borderRadius: 12, padding: 12, marginBottom: 15,
     borderWidth: 1, borderColor: '#F0F2F5',
+  },
+  cartCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#F8FAFF',
+  },
+  checkboxContainer: {
+    justifyContent: 'center',
+    paddingRight: 10,
   },
   itemImage: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#F0F0F0' },
   itemInfo: { flex: 1, marginLeft: 12, justifyContent: 'space-between' },
@@ -307,6 +360,9 @@ const styles = StyleSheet.create({
   checkoutBtn: { 
     backgroundColor: '#6C94C1', flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     height: 50, borderRadius: 10, gap: 10
+  },
+  disabledBtn: {
+    backgroundColor: '#CCC',
   },
   checkoutBtnText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   

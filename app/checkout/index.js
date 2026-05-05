@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS } from '../../constants/theme';
 import { auth, db } from '../../config/firebase';
 import { collection, query, getDocs, doc, getDoc, setDoc, deleteDoc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
@@ -13,9 +13,20 @@ import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
 
+const BANK_ICONS = {
+  'ธนาคารกรุงเทพ': require('../../assets/Bank_icon/กรุงเทพ.png'),
+  'ธนาคารกสิกรไทย': require('../../assets/Bank_icon/กสิกร.png'),
+  'ธนาคารไทยพาณิชย์': require('../../assets/Bank_icon/ไทยพาณิชย์ SCB.png'),
+  'ธนาคารกรุงไทย': require('../../assets/Bank_icon/กรุงไทย2.png'),
+  'ธนาคารกรุงศรีอยุธยา': require('../../assets/Bank_icon/กรุงศรี 2.png'),
+  'TrueMoney Wallet': require('../../assets/Bank_icon/ทรูวอเลต.png'),
+};
+
 export default function CheckoutScreen() {
   const router = useRouter();
+  const { selectedItemIds } = useLocalSearchParams();
   const [cartItems, setCartItems] = useState([]);
+  const [sellerBankInfo, setSellerBankInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -30,10 +41,30 @@ export default function CheckoutScreen() {
   const fetchCartItems = async () => {
     if (!auth.currentUser) return;
     try {
+      let ids = [];
+      if (selectedItemIds) {
+        ids = JSON.parse(selectedItemIds);
+      }
+
       const q = query(collection(db, 'carts', auth.currentUser.uid, 'items'));
       const snapshot = await getDocs(q);
-      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filter if we have specific selection
+      if (ids.length > 0) {
+        items = items.filter(item => ids.includes(item.id));
+      }
+      
       setCartItems(items);
+
+      // Fetch seller info
+      if (items.length > 0) {
+        const sellerId = items[0].sellerId;
+        const sellerSnap = await getDoc(doc(db, 'users', sellerId));
+        if (sellerSnap.exists()) {
+          setSellerBankInfo(sellerSnap.data());
+        }
+      }
     } catch (error) {
       console.error(error);
       Alert.alert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลสินค้าได้');
@@ -113,9 +144,19 @@ export default function CheckoutScreen() {
         // ลดสต็อกตามจำนวนที่สั่งซื้อ
         if (item.productId) {
           try {
-            await updateDoc(doc(db, 'products', item.productId), {
-              stock: increment(-(item.qty || 1))
-            });
+            const productRef = doc(db, 'products', item.productId);
+            const productSnap = await getDoc(productRef);
+            if (productSnap.exists()) {
+              const currentStock = productSnap.data().stock || 0;
+              const newStock = currentStock - (item.qty || 1);
+              // ถ้าสต็อกหมดหรือน้อยกว่า 0 ให้ซ่อนสินค้าออกจาก marketplace
+              const updateData = { stock: newStock };
+              if (newStock <= 0) {
+                updateData.stock = 0;
+                updateData.status = 'หมด';
+              }
+              await updateDoc(productRef, updateData);
+            }
           } catch (e) {
             console.log('Error deducting stock', e);
           }
@@ -212,12 +253,16 @@ export default function CheckoutScreen() {
               <View style={styles.paymentMethodBody}>
                 <View style={styles.bankAccountCard}>
                   <View style={styles.bankLogo}>
-                    <Text style={styles.bankLogoText}>BBL</Text>
+                    {sellerBankInfo?.bankName && BANK_ICONS[sellerBankInfo.bankName] ? (
+                      <Image source={BANK_ICONS[sellerBankInfo.bankName]} style={styles.bankLogoImg} />
+                    ) : (
+                      <Text style={styles.bankLogoText}>BANK</Text>
+                    )}
                   </View>
                   <View style={styles.bankDetails}>
-                    <Text style={styles.bankName}>ธนาคารกรุงเทพ</Text>
-                    <Text style={styles.bankNumber}>098-x-xxxx1-2</Text>
-                    <Text style={styles.bankAccountName}>ชื่อบัญชี: เอมิกา น่ารักมาก</Text>
+                    <Text style={styles.bankName}>{sellerBankInfo?.bankName || 'ธนาคาร (โปรดสอบถามผู้ขาย)'}</Text>
+                    <Text style={styles.bankNumber}>{sellerBankInfo?.bankAccountNo || 'ยังไม่ระบุเลขบัญชี'}</Text>
+                    <Text style={styles.bankAccountName}>ชื่อบัญชี: {sellerBankInfo?.bankAccountName || (sellerBankInfo ? `${sellerBankInfo.firstName} ${sellerBankInfo.lastName}` : 'ยังไม่ระบุชื่อบัญชี')}</Text>
                   </View>
                   <Ionicons name="copy-outline" size={20} color={COLORS.textLight} />
                 </View>
@@ -237,27 +282,6 @@ export default function CheckoutScreen() {
             )}
           </View>
 
-          {/* Method 2: Platform Payment (Mock) */}
-          <TouchableOpacity 
-            style={[styles.paymentMethodCard, styles.paymentMethodHeader, { marginTop: 15 }]}
-            onPress={() => setPaymentMethod('gateway')}
-          >
-            <Ionicons 
-              name={paymentMethod === 'gateway' ? "radio-button-on" : "radio-button-off"} 
-              size={24} 
-              color={paymentMethod === 'gateway' ? COLORS.primary : '#D0D0D0'} 
-            />
-            <View style={styles.paymentMethodTextContainer}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={styles.paymentMethodTitle}>ชำระผ่านระบบ YeEP</Text>
-                <View style={styles.recommendedBadge}>
-                  <Text style={styles.recommendedText}>RECOMMENDED</Text>
-                </View>
-              </View>
-              <Text style={styles.paymentMethodSub}>QR Code / Mobile Banking / Wallet</Text>
-            </View>
-            <Ionicons name="qr-code-outline" size={24} color={COLORS.textLight} />
-          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -339,8 +363,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', backgroundColor: '#F0F2F5', padding: 12, borderRadius: 8, 
     alignItems: 'center', marginTop: 15, marginBottom: 15
   },
-  bankLogo: { backgroundColor: '#1A4A9B', width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  bankLogoText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  bankLogo: { width: 45, height: 45, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F2F5' },
+  bankLogoImg: { width: '100%', height: '100%', resizeMode: 'cover' },
+  bankLogoText: { color: COLORS.textLight, fontWeight: 'bold', fontSize: 10 },
   bankDetails: { flex: 1, marginLeft: 12 },
   bankName: { fontSize: 12, color: COLORS.textLight },
   bankNumber: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },

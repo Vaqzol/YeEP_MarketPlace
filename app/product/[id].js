@@ -111,9 +111,7 @@ export default function ProductDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>สินค้า</Text>
-        <TouchableOpacity onPress={handleShare} style={styles.headerBtn}>
-          <Ionicons name="share-social-outline" size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.headerBtn} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -163,14 +161,6 @@ export default function ProductDetailScreen() {
                 <Text style={styles.sellerName}>
                   {seller ? `${seller.firstName} ${seller.lastName}` : 'ไม่พบข้อมูลผู้ขาย'}
                 </Text>
-                <View style={styles.sellerRating}>
-                  <Ionicons name="star" size={14} color="#FFC107" />
-                  <Text style={styles.ratingText}>
-                    {seller && seller.reviewCount > 0 
-                      ? (seller.totalRating / seller.reviewCount).toFixed(1) 
-                      : '0'} ({seller?.reviewCount || 0} รีวิว)
-                  </Text>
-                </View>
               </View>
             </View>
           </View>
@@ -259,6 +249,7 @@ export default function ProductDetailScreen() {
                   price: product.price,
                   image: product.images?.[0] || null,
                   sellerId: product.sellerId,
+                  sellerName: seller ? `${seller.firstName} ${seller.lastName}` : 'ร้านค้าทั่วไป',
                   quantity: 1,
                   addedAt: serverTimestamp()
                 });

@@ -19,6 +19,7 @@ export default function OrderDetailsScreen() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sellerName, setSellerName] = useState('กำลังโหลด...');
+  const [sellerProfile, setSellerProfile] = useState(null);
 
   useEffect(() => {
     if (!id) return;
@@ -48,7 +49,9 @@ export default function OrderDetailsScreen() {
             const sellerRef = doc(db, 'users', data.sellerId);
             const sellerSnap = await getDoc(sellerRef);
             if (sellerSnap.exists()) {
-              setSellerName(sellerSnap.data().displayName || 'ไม่มีชื่อ');
+              const sd = sellerSnap.data();
+              setSellerName(`${sd.firstName || ''} ${sd.lastName || ''}`.trim() || sd.displayName || 'ไม่มีชื่อ');
+              setSellerProfile(sd.profileImage || null);
             }
           } catch (err) {
             console.log('Error fetching seller name', err);
@@ -97,9 +100,7 @@ export default function OrderDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title}>รายละเอียดคำสั่งซื้อ</Text>
-        <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="help-circle-outline" size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.headerBtn} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -134,7 +135,14 @@ export default function OrderDetailsScreen() {
         {/* Product Details */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="storefront-outline" size={18} color="#555" />
+            {/* Seller Avatar */}
+            <View style={styles.sellerAvatar}>
+              {sellerProfile ? (
+                <Image source={{ uri: sellerProfile }} style={styles.sellerAvatarImg} />
+              ) : (
+                <Ionicons name="person" size={18} color="#999" />
+              )}
+            </View>
             <Text style={styles.storeName}>{sellerName}</Text>
             <TouchableOpacity style={styles.chatBtn} onPress={handleChat}>
               <Ionicons name="chatbubble-outline" size={14} color={COLORS.primary} />
@@ -307,6 +315,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginLeft: 8,
+  },
+  sellerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  sellerAvatarImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   chatBtn: {
     flexDirection: 'row',

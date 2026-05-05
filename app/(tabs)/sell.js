@@ -156,9 +156,6 @@ export default function SellScreen() {
           <Ionicons name="add" size={20} color="white" />
           <Text style={styles.addBtnText}>เพิ่มสินค้า</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.filterBtn}>
-          <Ionicons name="options-outline" size={20} color={COLORS.text} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.productList}>

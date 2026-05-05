@@ -241,14 +241,7 @@ export default function ChatScreen() {
             </View>
           </View>
 
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerActionBtn}>
-              <Ionicons name="call-outline" size={20} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerActionBtn}>
-              <Ionicons name="ellipsis-vertical" size={20} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
+
         </View>
 
         {/* Product Banner - Friend's Design */}
@@ -296,14 +289,8 @@ export default function ChatScreen() {
             { paddingBottom: Math.max(insets.bottom, 15) }
           ]}>
             <View style={styles.inputActions}>
-              <TouchableOpacity style={styles.inputActionBtn}>
-                <Ionicons name="add-outline" size={24} color={COLORS.textLight} />
-              </TouchableOpacity>
               <TouchableOpacity style={styles.inputActionBtn} onPress={pickImage}>
                 <Ionicons name="image-outline" size={22} color={COLORS.textLight} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.inputActionBtn}>
-                <Ionicons name="briefcase-outline" size={20} color={COLORS.textLight} />
               </TouchableOpacity>
             </View>
 

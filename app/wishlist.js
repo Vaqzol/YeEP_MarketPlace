@@ -73,15 +73,6 @@ export default function WishlistScreen() {
 
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-        
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={12} color="#FFC107" />
-          <Text style={styles.ratingText}>
-            {item.reviewCount > 0 
-              ? (item.totalRating / item.reviewCount).toFixed(1) 
-              : '0'} ({item.reviewCount || 0})
-          </Text>
-        </View>
 
         <Text style={styles.productPrice}>{item.price} บาท</Text>
       </View>

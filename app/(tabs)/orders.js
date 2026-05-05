@@ -247,19 +247,9 @@ export default function BuyerOrdersScreen() {
               <Text style={styles.primaryFullBtnText}>ฉันได้รับสินค้าแล้ว</Text>
             </TouchableOpacity>
           ) : isFullyDone ? (
-            <View style={styles.rowActions}>
-              <TouchableOpacity 
-                style={[styles.secondaryBtnFixed, item.isRated && { borderColor: '#C0C0C0', backgroundColor: '#F5F5F5' }]} 
-                onPress={() => !item.isRated && openRatingModal(item)}
-              >
-                <Text style={[styles.secondaryBtnTextFixed, item.isRated && { color: '#A0A0A0' }]}>
-                  {item.isRated ? '✓ ให้คะแนนแล้ว' : '⭐ ให้คะแนน'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryBtnFixed} onPress={() => router.push(`/order/${item.id}`)}>
-                <Text style={styles.secondaryBtnTextFixed}>ดูรายละเอียด</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/order/${item.id}`)}>
+              <Text style={styles.secondaryBtnText}>ดูรายละเอียด</Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/order/${item.id}`)}>
               <Text style={styles.secondaryBtnText}>ดูรายละเอียด</Text>
@@ -278,9 +268,7 @@ export default function BuyerOrdersScreen() {
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>คำสั่งซื้อของฉัน</Text>
-        <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="ellipsis-vertical" size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.headerBtn} />
       </View>
 
       {/* Tabs */}
@@ -374,50 +362,7 @@ export default function BuyerOrdersScreen() {
         </View>
       </Modal>
 
-      {/* Rating Modal */}
-      <Modal transparent visible={ratingModalVisible} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: 30 }]}>
-            <Text style={[styles.modalTitle, { marginBottom: 8 }]}>⭐ ให้คะแนนสินค้า</Text>
-            <Text style={{ textAlign: 'center', color: '#888', marginBottom: 20 }}>ความคิดเห็นของคุณช่วยให้คนอื่นตัดสินใจได้ครับ 🙏</Text>
-            
-            {/* Star Selector */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20, gap: 8 }}>
-              {[1, 2, 3, 4, 5].map(star => (
-                <TouchableOpacity key={star} onPress={() => setRatingStars(star)}>
-                  <Text style={{ fontSize: 38 }}>{star <= ratingStars ? '⭐' : '☆'}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={{ textAlign: 'center', color: '#6C94C1', fontWeight: 'bold', marginBottom: 16 }}>
-              {ratingStars === 1 ? 'แย่มาก' : ratingStars === 2 ? 'พอใช้ได้' : ratingStars === 3 ? 'เป็นสิ' : ratingStars === 4 ? 'ดีมาก' : 'ยอดเยี่ยม!'}
-            </Text>
 
-            {/* Comment Input */}
-            <TextInput
-              style={{
-                borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 10,
-                padding: 12, minHeight: 80, textAlignVertical: 'top',
-                fontSize: 14, color: '#333', backgroundColor: '#FAFAFA', marginBottom: 20
-              }}
-              placeholder="เขียนความคิดเห็นเพิ่มเติม..."
-              placeholderTextColor="#AAA"
-              value={ratingComment}
-              onChangeText={setRatingComment}
-              multiline
-            />
-
-            <View style={styles.modalActionsRow}>
-              <TouchableOpacity style={[styles.modalBtnRow, { backgroundColor: '#6C94C1' }]} onPress={submitRating}>
-                <Text style={styles.modalBtnTextCancel}>ส่งรีวิว</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnRow, { backgroundColor: '#DDD' }]} onPress={() => setRatingModalVisible(false)}>
-                <Text style={[styles.modalBtnTextCancel, { color: '#555' }]}>ยกเลิก</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
     </SafeAreaView>
   );
