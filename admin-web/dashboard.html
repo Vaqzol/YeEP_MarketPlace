@@ -579,6 +579,15 @@ auth.onAuthStateChanged(async (user) => {
     `${currentAdminData.firstName || ''} ${currentAdminData.lastName || ''}`.trim();
   document.getElementById('settingEmail').textContent = user.email;
   document.getElementById('notifToggle').checked = currentAdminData.notificationsEnabled !== false;
+  
+  const updateAdminStatus = () => {
+    db.collection('users').doc(user.uid).update({ 
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp() 
+    }).catch(e => console.error(e));
+  };
+  updateAdminStatus();
+  setInterval(updateAdminStatus, 60000); // Update every minute while online
+  
   loadAll();
 });
 
@@ -1093,7 +1102,6 @@ function viewUser(id) {
       </div>
       <div style="display:grid;gap:8px">
         <div class="settings-item"><span class="settings-item-label">บทบาท</span><span>${u.role === 'admin' ? '⭐ แอดมิน' : '👤 ผู้ใช้'}</span></div>
-        <div class="settings-item"><span class="settings-item-label">สถานะ</span><span>${u.status === 'banned' ? '🚫 ถูกระงับ' : '✅ ใช้งานอยู่'}</span></div>
         <div class="settings-item"><span class="settings-item-label">วันที่สมัคร</span><span>${u.createdAt?.toDate?.()?.toLocaleDateString('th-TH') || '—'}</span></div>
       </div>
       ${u.status === 'banned' ? `

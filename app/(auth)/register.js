@@ -147,20 +147,6 @@ export default function RegisterScreen() {
                 style={styles.registerBtn}
                 disabled={isLoading}
               />
-              
-              <View style={styles.dividerContainer}>
-                <View style={styles.divider} />
-                <Text style={styles.dividerText}>หรือดำเนินการต่อด้วย</Text>
-                <View style={styles.divider} />
-              </View>
-              
-              <CustomButton 
-                title="Google" 
-                type="outline"
-                iconName="logo-google"
-                iconColor="#DB4437"
-                onPress={() => {}} 
-              />
             </View>
             
             <View style={styles.footer}>
