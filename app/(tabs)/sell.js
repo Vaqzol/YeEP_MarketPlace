@@ -147,12 +147,38 @@ export default function SellScreen() {
     finally { setUpdatingStatus(false); setSelectedOrder(null); }
   };
 
+  // ===== BANK ACCOUNT CHECK =====
+  const handleAddProduct = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const userSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const hasBankInfo = userData.bankAccountNo?.trim() && userData.bankName?.trim();
+        if (!hasBankInfo) {
+          Alert.alert(
+            'ต้องตั้งค่าบัญชีก่อน',
+            'กรุณาเพิ่มข้อมูลบัญชีธนาคารในหน้าโปรไฟล์ก่อนลงขายสินค้าครับ เพื่อให้ลูกค้าโอนเงินให้ถูกต้อง',
+            [
+              { text: 'ยกเลิก', style: 'cancel' },
+              { text: 'ไปตั้งค่าบัญชี', onPress: () => router.push('/(tabs)/profile') }
+            ]
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    router.push('/seller/add-product');
+  };
+
   // ===== TAB CONTENT RENDERERS =====
 
   const renderProductsTab = () => (
     <>
       <View style={styles.inventoryActions}>
-        <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/seller/add-product')}>
+        <TouchableOpacity style={styles.addBtn} onPress={handleAddProduct}>
           <Ionicons name="add" size={20} color="white" />
           <Text style={styles.addBtnText}>เพิ่มสินค้า</Text>
         </TouchableOpacity>
